@@ -16,9 +16,9 @@ export default function Register() {
         setError('');
         setLoading(true);
 
-        // ইনপুট ভ্যালিডেশন
+        // Input validation
         if (password !== confirmPassword) {
-            setError('পাসওয়ার্ড মিলছে না');
+            setError('Passwords do not match');
             setLoading(false);
             return;
         }
@@ -33,14 +33,14 @@ export default function Register() {
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.message || 'রেজিস্ট্রেশন ফেইলড');
+                throw new Error(data.message || 'Registration failed');
             }
 
-            // JWT টোকেন এবং ইউজার ডেটা সেভ করুন
+            // Save JWT token and user data
             localStorage.setItem('token', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
-            // চ্যাট পেজে রিডাইরেক্ট
+            // Redirect to chat page
             router.push('/chat');
         } catch (err) {
             setError(err.message);
@@ -52,12 +52,12 @@ export default function Register() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center mb-6">রেজিস্টার</h2>
+                <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
                 {error && <p className="text-red-500 text-center mb-4">{error}</p>}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                            নাম
+                            Name
                         </label>
                         <input
                             type="text"
@@ -65,13 +65,13 @@ export default function Register() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            placeholder="আপনার নাম লিখুন"
+                            placeholder="Enter your name"
                             required
                         />
                     </div>
                     <div className="mb-4">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                            ইমেইল
+                            Email
                         </label>
                         <input
                             type="email"
@@ -79,13 +79,13 @@ export default function Register() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            placeholder="আপনার ইমেইল লিখুন"
+                            placeholder="Enter your email"
                             required
                         />
                     </div>
                     <div className="mb-4">
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                            পাসওয়ার্ড
+                            Password
                         </label>
                         <input
                             type="password"
@@ -93,13 +93,13 @@ export default function Register() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            placeholder="আপনার পাসওয়ার্ড লিখুন"
+                            placeholder="Enter your password"
                             required
                         />
                     </div>
                     <div className="mb-6">
                         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                            পাসওয়ার্ড নিশ্চিত করুন
+                            Confirm Password
                         </label>
                         <input
                             type="password"
@@ -107,7 +107,7 @@ export default function Register() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            placeholder="পাসওয়ার্ড আবার লিখুন"
+                            placeholder="Enter password again"
                             required
                         />
                     </div>
@@ -118,13 +118,13 @@ export default function Register() {
                             loading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                     >
-                        {loading ? 'লোডিং...' : 'রেজিস্টার'}
+                        {loading ? 'Loading...' : 'Register'}
                     </button>
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600">
-                    ইতিমধ্যে অ্যাকাউন্ট আছে?{' '}
+                    Already have an account?{' '}
                     <a href="/login" className="text-sky-500 hover:underline">
-                        লগইন করুন
+                        Login
                     </a>
                 </p>
             </div>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import io from 'socket.io-client';
 
@@ -31,7 +31,7 @@ export default function Chat() {
     const [processing, setProcessing] = useState(null);
     const router = useRouter();
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!token) return;
         setLoading(true);
         try {
@@ -49,9 +49,9 @@ export default function Chat() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token, setLoading, setFriends, setNonFriends, setPendingRequests, setPendingSentRequests, setError]);
 
-    const fetchMessages = async (friendId) => {
+    const fetchMessages = useCallback(async (friendId) => {
         if (!token || !friendId) return;
         try {
             const messages = await fetchWithAuth(
@@ -62,7 +62,7 @@ export default function Chat() {
         } catch (err) {
             setError(err.message || 'Failed to fetch messages');
         }
-    };
+    }, [token, setMessages, setError]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -115,7 +115,7 @@ export default function Chat() {
             });
         });
 
-        // Listen for new friend request and show notification
+        // Listen for a new friend request and show notification
         newSocket.on('friendRequest', (request) => {
             // Show notification
             setError(`New friend request from ${request.sender?.name || 'someone'}!`);
@@ -147,13 +147,13 @@ export default function Chat() {
         });
 
         newSocket.on('friendRequestAccepted', ({ requestId, receiverId }) => {
-            // Still fetch data to update friends list, but don't block UI update
+            // Still fetch data to update a friend's list, but don't block UI update
             fetchData();
             if (selectedFriendId === receiverId) {
                 fetchMessages(receiverId);
             }
 
-            // Update pending requests list by removing the accepted request
+            // Update a pending requests list by removing the accepted request
             setPendingRequests(prev => prev.filter(req => req.id !== requestId));
 
             // Check for all pending requests to ensure we have the complete list
@@ -162,7 +162,7 @@ export default function Chat() {
 
         // Listen for rejected friend requests
         newSocket.on('friendRequestRejected', ({ requestId }) => {
-            // Update pending requests list by removing the rejected request
+            // Update a pending requests list by removing the rejected request
             setPendingRequests(prev => prev.filter(req => req.id !== requestId));
 
             // Check for all pending requests to ensure we have the complete list
@@ -206,13 +206,13 @@ export default function Chat() {
             newSocket.off('friendRequestRejected');
             newSocket.disconnect();
         };
-    }, [token, user]);
+    }, [token, user, fetchData, fetchMessages, selectedFriendId]);
 
     useEffect(() => {
         if (selectedFriendId) {
             fetchMessages(selectedFriendId);
         }
-    }, [selectedFriendId, token]);
+    }, [selectedFriendId, token, fetchMessages]);
 
     // Set default selectedFriendId to the first friend in the list when friends are loaded
     useEffect(() => {
@@ -267,7 +267,7 @@ export default function Chat() {
 
                 {/* Main Content - Message Section */}
                 <div className="flex-1 flex justify-center">
-                    {/* On mobile: Show friend list when no friend is selected, otherwise show messages */}
+                    {/* On mobile: Show a friend list when no friend is selected, otherwise show messages */}
                     {!selectedFriendId && (
                         <div className="md:hidden w-full bg-white overflow-y-auto">
 

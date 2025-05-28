@@ -9,14 +9,14 @@ const handle = app.getRequestHandler();
 app.prepare().then(async () => {
     const server = createServer((req, res) => {
         const parsedUrl = parse(req.url, true);
-        handle(req, res, parsedUrl); // Next.js এর সব রাউট (API সহ) হ্যান্ডল করে
+        handle(req, res, parsedUrl); // Handles all Next.js routes (including API)
     });
 
     // Dynamically import the socket module
     const { initSocket } = await import('./lib/socket.js');
-    initSocket(server); // Socket.IO সার্ভার ইনিশিয়ালাইজ
+    initSocket(server); // Initialize Socket.IO server
 
-    const port = process.env.PORT || 3000; // পোর্ট ৩০০১
+    const port = process.env.PORT || 3000; // Port 3000
     server.listen(port, (err) => {
         if (err) throw err;
         console.log(`> Server running on http://localhost:${port}`);

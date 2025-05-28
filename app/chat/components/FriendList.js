@@ -57,10 +57,16 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
                                             height={40} 
                                             className="object-cover"
                                         />
-                                        {friend.isOnline && (
+                                        {friend.isOnline ? (
                                             <span className="absolute bottom-0 right-0 flex size-3">
                                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
                                                 <span className="relative inline-flex size-3 rounded-full bg-sky-500"></span>
+                                            </span>
+                                        ):
+                                        (
+                                            <span className="absolute bottom-0 right-0 flex size-3">
+                                                <span className="absolute inline-flex h-full w-full  rounded-full bg-gray-400 opacity-75"></span>
+                                                <span className="relative inline-flex size-3 rounded-full bg-gray-500"></span>
                                             </span>
                                         )}
                                     </div>
@@ -69,12 +75,19 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
                                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                         </svg>
-                                        {friend.isOnline && (
+                                        {friend.isOnline ? (
                                             <span className="absolute bottom-0 right-0 flex size-3">
                                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75"></span>
                                                 <span className="relative inline-flex size-3 rounded-full bg-sky-500"></span>
                                             </span>
-                                        )}
+                                        ):
+                                            (
+                                                <span className="absolute bottom-0 right-0 flex size-3">
+                                                <span className="absolute inline-flex h-full w-full  rounded-full bg-gray-400 opacity-75"></span>
+                                                <span className="relative inline-flex size-3 rounded-full bg-gray-500"></span>
+                                            </span>
+                                            )
+                                        }
                                     </div>
                                 )}
                             </div>

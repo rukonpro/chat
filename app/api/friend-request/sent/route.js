@@ -1,6 +1,6 @@
-import prisma from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
-import { getIO } from '@/lib/socket';
+import prisma from '../../../../lib/prisma';
+import { verifyToken } from '../../../../lib/auth';
+import { getIO } from '../../../../lib/socket';
 import { NextResponse } from 'next/server';
 
 export async function GET(req) {

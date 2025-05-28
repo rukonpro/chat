@@ -2,6 +2,7 @@
 import React, {useEffect, useState} from 'react';
 import {useRouter} from "next/navigation";
 import { io } from 'socket.io-client';
+import Image from 'next/image';
 
 const Friends = () => {
     const [error, setError] = useState('');
@@ -13,12 +14,12 @@ const Friends = () => {
     const router = useRouter();
 
     useEffect(() => {
-        // লগইন ডেটা লোড
+        // Load login data
         const storedToken = localStorage.getItem('token');
         const storedUser = JSON.parse(localStorage.getItem('user'));
 
         if (!storedToken || !storedUser?.id) {
-            setError('লগইন করুন');
+            setError('Please login');
             router.push('/login');
             return;
         }
@@ -37,7 +38,7 @@ const Friends = () => {
         return () => {
             socketInstance.disconnect();
         };
-    },[]);
+    },[router]);
 
     // Listen for unfriend events
     useEffect(() => {
@@ -58,7 +59,7 @@ const Friends = () => {
     }, [socket, user]);
 
     useEffect(() => {
-        // ফ্রেন্ড লিস্ট ফেচ
+        // Fetch friend list
         const fetchFriends = async () => {
             if (!token) return;
             setLoading(true);
@@ -68,7 +69,7 @@ const Friends = () => {
                 });
 
 
-                if (!res.ok) throw new Error('ফ্রেন্ড ফেচ ফেইলড');
+                if (!res.ok) throw new Error('Failed to fetch friends');
                 const users = await res.json();
                 console.log(users);
                 setFriends(users.filter((user) => user.isFriend));
@@ -117,10 +118,12 @@ const Friends = () => {
                         <div key={friend.id} className="border rounded-lg p-4 flex items-center justify-between">
                             <div className="flex items-center">
                                 {friend.profilePic ? (
-                                    <img 
+                                    <Image 
                                         src={friend.profilePic} 
                                         alt={friend.name} 
-                                        className="w-10 h-10 rounded-full mr-3"
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full mr-3"
                                     />
                                 ) : (
                                     <div className="w-10 h-10 rounded-full bg-gray-300 mr-3 flex items-center justify-center">
@@ -146,7 +149,7 @@ const Friends = () => {
                 </div>
             ) : (
                 <div className="text-center py-8">
-                    <p className="text-gray-500">You don't have any friends yet.</p>
+                    <p className="text-gray-500">You don&apos;t have any friends yet.</p>
                 </div>
             )}
         </div>

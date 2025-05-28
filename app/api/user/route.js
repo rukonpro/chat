@@ -1,5 +1,6 @@
-import prisma from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
+import prisma from '../../../lib/prisma';
+import { verifyToken } from '../../../lib/auth';
+import { getIO } from '../../../lib/socket';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
@@ -11,6 +12,12 @@ export async function GET(request) {
     try {
         const decoded = verifyToken(token);
         const userId = decoded.id;
+
+        // Get the current user to ensure we're online
+        await prisma.user.update({
+            where: { id: userId },
+            data: { isOnline: true },
+        });
 
         const users = await prisma.user.findMany({
             where: { id: { not: userId } },
@@ -38,11 +45,27 @@ export async function GET(request) {
             f.userAId === userId ? f.userBId : f.userAId
         );
 
-        // Add isFriend field to users
-        const usersWithFriendStatus = users.map((user) => ({
-            ...user,
-            isFriend: friendIds.includes(user.id),
-        }));
+        // Add isFriend field to users and verify online status
+        const usersWithFriendStatus = users.map((user) => {
+            // If a socket connection exists for this user, they're online
+            // Otherwise, they should be marked as offline regardless of DB state
+            const socketIO = getIO();
+            const sockets = socketIO.sockets?.sockets || new Map();
+
+            // Check if any socket has this userId
+            let isReallyOnline = false;
+            sockets.forEach((socket) => {
+                if (socket.userId === user.id) {
+                    isReallyOnline = true;
+                }
+            });
+
+            return {
+                ...user,
+                isOnline: isReallyOnline, // Override with the real status
+                isFriend: friendIds.includes(user.id),
+            };
+        });
 
         return NextResponse.json(usersWithFriendStatus, { status: 200 });
     } catch (error) {
