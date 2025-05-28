@@ -64,7 +64,7 @@ export default function Register() {
                             id="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="আপনার নাম লিখুন"
                             required
                         />
@@ -78,7 +78,7 @@ export default function Register() {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="আপনার ইমেইল লিখুন"
                             required
                         />
@@ -92,7 +92,7 @@ export default function Register() {
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="আপনার পাসওয়ার্ড লিখুন"
                             required
                         />
@@ -106,7 +106,7 @@ export default function Register() {
                             id="confirmPassword"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="পাসওয়ার্ড আবার লিখুন"
                             required
                         />
@@ -114,7 +114,7 @@ export default function Register() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full py-2 px-4 bg-sky-500 text-white rounded-md hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                             loading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                     >
@@ -123,7 +123,7 @@ export default function Register() {
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600">
                     ইতিমধ্যে অ্যাকাউন্ট আছে?{' '}
-                    <a href="/login" className="text-blue-500 hover:underline">
+                    <a href="/login" className="text-sky-500 hover:underline">
                         লগইন করুন
                     </a>
                 </p>

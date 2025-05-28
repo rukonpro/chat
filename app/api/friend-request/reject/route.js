@@ -15,10 +15,10 @@ export async function POST(request) {
         const decoded = verifyToken(token);
         const userId = decoded.id;
 
-        const request = await prisma.friendRequest.findUnique({
+        const friendRequest = await prisma.friendRequest.findUnique({
             where: { id: requestId },
         });
-        if (!request || request.receiverId !== userId) {
+        if (!friendRequest || friendRequest.receiverId !== userId) {
             return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
         }
 
@@ -28,7 +28,10 @@ export async function POST(request) {
         });
 
         const io = getIO();
-        io.to(request.senderId).emit('friendRequestRejected', { requestId, receiverId: userId });
+        io.to(friendRequest.senderId).emit('friendRequestRejected', { requestId, receiverId: userId });
+
+        // Also emit to the receiver for real-time updates across multiple tabs/devices
+        io.to(userId).emit('friendRequestRejected', { requestId, receiverId: userId });
 
         return NextResponse.json({ message: 'Friend request rejected' }, { status: 200 });
     } catch (error) {

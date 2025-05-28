@@ -2,6 +2,7 @@
   "name": "chat",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "node server.js",
     "dev:turbo": "next dev --turbopack",
@@ -9,7 +10,8 @@
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx}\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "koro": "node server.js"
   },
   "dependencies": {
     "@prisma/client": "^6.8.2",

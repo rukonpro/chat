@@ -20,11 +20,15 @@ export async function GET(req) {
             },
         });
 
+        // Get Socket.IO instance and emit real-time event to the user
+        const io = getIO();
+        io.to(userId).emit('friendRequests', requests);
+
         return NextResponse.json(requests, { status: 200 });
     } catch (error) {
         console.error('Error fetching friend requests:', error.message);
         return NextResponse.json(
-            { message: 'Server error', error: 'error.message' },
+            { message: 'Server error', error: error.message },
             { status: 500 }
         );
     }
@@ -56,6 +60,15 @@ export async function POST(request) {
 
         const io = getIO();
         io.to(receiverId).emit('friendRequest', {
+            id: friendRequest.id,
+            senderId,
+            receiverId,
+            status: friendRequest.status,
+            createdAt: friendRequest.createdAt,
+        });
+
+        // Also emit to the sender for real-time updates across multiple tabs/devices
+        io.to(senderId).emit('friendRequestSent', {
             id: friendRequest.id,
             senderId,
             receiverId,

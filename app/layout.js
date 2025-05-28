@@ -16,12 +16,18 @@ export const metadata = {
     description: 'A real-time chat application built with Next.js and Socket.IO',
 };
 
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+};
+
 export default function RootLayout({ children }) {
     return (
         <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
-        </body>
+            <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+                {children}
+            </body>
         </html>
     );
 }

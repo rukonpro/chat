@@ -57,7 +57,7 @@ export default function Login() {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="আপনার ইমেইল লিখুন"
                             required
                         />
@@ -71,7 +71,7 @@ export default function Login() {
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
                             placeholder="আপনার পাসওয়ার্ড লিখুন"
                             required
                         />
@@ -79,7 +79,7 @@ export default function Login() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full py-2 px-4 bg-sky-500 text-white rounded-md hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
                             loading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                     >
@@ -88,7 +88,7 @@ export default function Login() {
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600">
                     অ্যাকাউন্ট নেই?{' '}
-                    <Link href="/register" className="text-blue-500 hover:underline">
+                    <Link href="/register" className="text-sky-500 hover:underline">
                         রেজিস্টার করুন
                     </Link>
                 </p>
