@@ -1,106 +1,66 @@
 # Chat Application Deployment Guide
 
-## Issue: Socket.IO on Vercel
+## Socket.IO Configuration for Vercel
 
-The application was experiencing issues with Socket.IO connections when deployed to Vercel. This is because Vercel uses a serverless architecture that doesn't support long-running HTTP servers with Socket.IO attached.
+This Next.js application uses Socket.IO for real-time communication. The application is configured to use the same URL for both the frontend and Socket.IO server: `https://chat-rukon.vercel.app`.
 
-## Solution
+## How It Works
 
-The solution is to use a separate Socket.IO server hosted on a platform that supports WebSockets and persistent connections, such as Heroku, Railway, or similar services.
+The application is built with Next.js and uses a custom server setup (server.js) that:
 
-## Deployment Steps
+1. Serves the Next.js application
+2. Initializes a Socket.IO server on the same server
 
-### 1. Deploy the Socket.IO Server
+This approach allows us to use the same URL for both the frontend and Socket.IO server, simplifying the deployment process.
 
-You need to deploy the Socket.IO server to a platform that supports WebSockets. Here's how to do it with Heroku:
+## Deployment on Vercel
 
-1. Create a new repository for your Socket.IO server
-2. Create a basic server.js file:
+When deploying to Vercel, the application will automatically use the correct URL for Socket.IO connections:
+
+- In development: `http://localhost:3000`
+- In production: `https://chat-rukon.vercel.app`
+
+### Important Configuration
+
+The Socket.IO URL is configured in `app/chat/components/utils.js`:
 
 ```javascript
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cors from 'cors';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const app = express();
-app.use(cors());
-
-const httpServer = createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.ALLOWED_ORIGINS || "*",
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
-});
-
-// Copy your Socket.IO logic from lib/socket.js here
-// You'll need to adapt it to work with your database
-
-const PORT = process.env.PORT || 3001;
-httpServer.listen(PORT, () => {
-  console.log(`Socket.IO server running on port ${PORT}`);
-});
-```
-
-3. Create a package.json file:
-
-```json
-{
-  "name": "chat-socketio-server",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.8.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "@prisma/client": "^6.8.2"
+// If no environment variable is set, use a fallback
+if (!SOCKET_URL) {
+  if (typeof window !== 'undefined' && window.location.hostname === 'chat-rukon.vercel.app') {
+    // Using the same URL for both frontend and Socket.IO server
+    SOCKET_URL = 'https://chat-rukon.vercel.app';
+  } else {
+    // For local development
+    SOCKET_URL = 'http://localhost:3000';
   }
 }
 ```
 
-4. Deploy this server to Heroku or another platform that supports WebSockets
+## Environment Variables
 
-### 2. Update the Vercel Environment Variables
+You can optionally set the following environment variables in your Vercel project settings:
 
-In your Vercel project settings, add the following environment variable:
-
-- `NEXT_PUBLIC_SOCKET_URL`: Set this to your Socket.IO server URL (e.g., `https://your-app-name.herokuapp.com`)
-
-### 3. Update Your Code
-
-The code has been updated to use the Socket.IO server URL from the environment variable or to detect when running on Vercel and use a separate Socket.IO server.
-
-In `app/chat/components/utils.js`, replace the placeholder URL with your actual Socket.IO server URL:
-
-```javascript
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 
-  (typeof window !== 'undefined' && window.location.hostname === 'chat-rukon.vercel.app' 
-    ? 'https://your-actual-socketio-server.herokuapp.com' // Replace with your actual Socket.IO server URL
-    : 'http://localhost:3000');
-```
-
-### 4. Redeploy Your Application
-
-After making these changes, redeploy your application to Vercel.
+- `NEXT_PUBLIC_SOCKET_URL`: Override the Socket.IO server URL if needed
+- `NEXT_PUBLIC_API_URL`: Override the API URL if needed
 
 ## Local Development
 
-For local development, the application will continue to use `http://localhost:3000` for both the API and Socket.IO server.
+For local development:
+
+1. Run `npm run dev` to start the development server
+2. The application will use `http://localhost:3000` for both the API and Socket.IO server
 
 ## Troubleshooting
 
-If you're still experiencing issues:
+If you're experiencing issues with Socket.IO connections:
 
-1. Check that your Socket.IO server is running and accessible
-2. Verify that CORS is properly configured on your Socket.IO server
+1. Check that your server.js file is properly configured to initialize Socket.IO
+2. Verify that the Socket.IO client in your application is connecting to the correct URL
 3. Check the browser console for any connection errors
-4. Make sure your environment variables are correctly set in Vercel
+4. Make sure your Vercel deployment is using the latest version of your code
+
+### Common Issues
+
+- **404 errors for Socket.IO endpoints**: Make sure your server.js file is being used by Vercel. Check your package.json to ensure the start script is set to `node server.js`.
+- **CORS errors**: If you're seeing CORS errors, make sure your Socket.IO server is configured to allow connections from your frontend domain.
