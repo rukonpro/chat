@@ -10,7 +10,7 @@ let SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 if (!SOCKET_URL) {
   if (typeof window !== 'undefined' && window.location.hostname === 'chat-rukon.vercel.app') {
     // Using the same URL for both frontend and Socket.IO server
-    SOCKET_URL = 'https://chat-rukon.vercel.app';
+    SOCKET_URL = 'https://chat-kpcf.onrender.com';
   } else {
     // For local development
     SOCKET_URL = 'http://localhost:3000';
