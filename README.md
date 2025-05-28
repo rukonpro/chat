@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Chat Application Deployment Guide
 
-## Getting Started
+## Issue: Socket.IO on Vercel
 
-First, run the development server:
+The application was experiencing issues with Socket.IO connections when deployed to Vercel. This is because Vercel uses a serverless architecture that doesn't support long-running HTTP servers with Socket.IO attached.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Solution
+
+The solution is to use a separate Socket.IO server hosted on a platform that supports WebSockets and persistent connections, such as Heroku, Railway, or similar services.
+
+## Deployment Steps
+
+### 1. Deploy the Socket.IO Server
+
+You need to deploy the Socket.IO server to a platform that supports WebSockets. Here's how to do it with Heroku:
+
+1. Create a new repository for your Socket.IO server
+2. Create a basic server.js file:
+
+```javascript
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS || "*",
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+// Copy your Socket.IO logic from lib/socket.js here
+// You'll need to adapt it to work with your database
+
+const PORT = process.env.PORT || 3001;
+httpServer.listen(PORT, () => {
+  console.log(`Socket.IO server running on port ${PORT}`);
+});
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Create a package.json file:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```json
+{
+  "name": "chat-socketio-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "@prisma/client": "^6.8.2"
+  }
+}
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Deploy this server to Heroku or another platform that supports WebSockets
 
-## Learn More
+### 2. Update the Vercel Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+In your Vercel project settings, add the following environment variable:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `NEXT_PUBLIC_SOCKET_URL`: Set this to your Socket.IO server URL (e.g., `https://your-app-name.herokuapp.com`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. Update Your Code
 
-## Deploy on Vercel
+The code has been updated to use the Socket.IO server URL from the environment variable or to detect when running on Vercel and use a separate Socket.IO server.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+In `app/chat/components/utils.js`, replace the placeholder URL with your actual Socket.IO server URL:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```javascript
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 
+  (typeof window !== 'undefined' && window.location.hostname === 'chat-rukon.vercel.app' 
+    ? 'https://your-actual-socketio-server.herokuapp.com' // Replace with your actual Socket.IO server URL
+    : 'http://localhost:3000');
+```
+
+### 4. Redeploy Your Application
+
+After making these changes, redeploy your application to Vercel.
+
+## Local Development
+
+For local development, the application will continue to use `http://localhost:3000` for both the API and Socket.IO server.
+
+## Troubleshooting
+
+If you're still experiencing issues:
+
+1. Check that your Socket.IO server is running and accessible
+2. Verify that CORS is properly configured on your Socket.IO server
+3. Check the browser console for any connection errors
+4. Make sure your environment variables are correctly set in Vercel

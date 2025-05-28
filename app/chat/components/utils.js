@@ -1,6 +1,12 @@
 // Constants
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000';
+// For Socket.IO, we need to use a different approach for Vercel deployment
+// In development, we use localhost
+// In production, we need to use a separate Socket.IO server that supports WebSockets
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 
+  (typeof window !== 'undefined' && window.location.hostname === 'chat-rukon.vercel.app' 
+    ? 'https://chat-rukon.vercel.app' // Replace with your actual Socket.IO server URL
+    : 'http://localhost:3000');
 
 // Utility Function
 export const fetchWithAuth = async (url, token, options = {}) => {
