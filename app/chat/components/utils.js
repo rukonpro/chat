@@ -8,7 +8,7 @@ let SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 
 // If no environment variable is set, use a fallback
 if (!SOCKET_URL) {
-  if (typeof window !== 'undefined' && window.location.hostname === 'chat-rukon.vercel.app') {
+  if (typeof window !== 'undefined' && window.location.hostname === 'chat-kpcf.onrender.com') {
     // Using the same URL for both frontend and Socket.IO server
     SOCKET_URL = 'https://chat-kpcf.onrender.com';
   } else {

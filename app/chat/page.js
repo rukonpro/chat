@@ -276,11 +276,11 @@ export default function Chat() {
     }, [selectedFriendId, socket, socketConnected]);
 
     // Set default selectedFriendId to the first friend in the list when friends are loaded
-    useEffect(() => {
-        if (friends.length > 0 && selectedFriendId === null) {
-            setSelectedFriendId(friends[0].id);
-        }
-    }, [friends, selectedFriendId]);
+    // useEffect(() => {
+    //     if (friends.length > 0 && selectedFriendId === null) {
+    //         setSelectedFriendId(friends[0].id);
+    //     }
+    // }, [friends, selectedFriendId]);
 
     // Save selectedFriendId to localStorage when it changes
     useEffect(() => {
