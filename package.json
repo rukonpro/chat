@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server.js",
     "dev:turbo": "next dev --turbopack",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx}\"",
