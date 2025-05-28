@@ -1,6 +1,5 @@
 'use client';
 
-import { fetchWithAuth, API_BASE_URL } from './utils';
 
 const Notification = ({
     pendingRequests,
@@ -12,41 +11,47 @@ const Notification = ({
     notificationDrawerOpen,
     processing,
     setProcessing,
+    socket,
     isMobile = false
 }) => {
     const handleAcceptRequest = (requestId) => {
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
+            return;
+        }
+
         setProcessing(requestId);
-        fetchWithAuth(`${API_BASE_URL}/api/friend-request/accept`, token, {
-            method: 'POST',
-            body: JSON.stringify({ requestId }),
-        })
-        .then(() => {
-            setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
-            fetchData();
-        })
-        .catch(err => {
-            setError(err.message || 'Failed to accept request');
-        })
-        .finally(() => {
-            setProcessing(null);
-        });
+
+        // Emit the acceptFriendRequest event
+        socket.emit('acceptFriendRequest', { requestId });
+
+        // Set a timeout to clear the processing state in case of no response
+        setTimeout(() => {
+            if (processing === requestId) {
+                setProcessing(null);
+                setError('Accept request timed out');
+            }
+        }, 5000);
     };
 
     const handleRejectRequest = (requestId) => {
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
+            return;
+        }
+
         setProcessing(requestId);
-        fetchWithAuth(`${API_BASE_URL}/api/friend-request/reject`, token, {
-            method: 'POST',
-            body: JSON.stringify({ requestId }),
-        })
-        .then(() => {
-            setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
-        })
-        .catch(err => {
-            setError(err.message || 'Failed to reject request');
-        })
-        .finally(() => {
-            setProcessing(null);
-        });
+
+        // Emit the rejectFriendRequest event
+        socket.emit('rejectFriendRequest', { requestId });
+
+        // Set a timeout to clear the processing state in case of no response
+        setTimeout(() => {
+            if (processing === requestId) {
+                setProcessing(null);
+                setError('Reject request timed out');
+            }
+        }, 5000);
     };
 
     return (

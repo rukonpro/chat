@@ -1,9 +1,8 @@
 'use client';
 import { useState } from 'react';
-import { fetchWithAuth, API_BASE_URL } from './utils';
 import Image from 'next/image';
 
-const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, setError, fetchData }) => {
+const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, setError, fetchData, socket }) => {
     const [openMenuId, setOpenMenuId] = useState(null);
     const [unfriending, setUnfriending] = useState(null);
 
@@ -12,24 +11,42 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
         setOpenMenuId(openMenuId === friendId ? null : friendId);
     };
 
-    const handleUnfriend = async (e, friendId) => {
+    const handleUnfriend = (e, friendId) => {
         e.stopPropagation();
         setOpenMenuId(null);
         setUnfriending(friendId);
 
-        try {
-            await fetchWithAuth(`${API_BASE_URL}/api/friendship/unfriend`, token, {
-                method: 'POST',
-                body: JSON.stringify({ friendId }),
-            });
-
-            // Refresh the friends list
-            await fetchData();
-        } catch (err) {
-            setError(err.message || 'Failed to unfriend user');
-        } finally {
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
             setUnfriending(null);
+            return;
         }
+
+        // Emit unfriend event
+        socket.emit('unfriend', { friendId });
+
+        // Listen for response (one-time listener)
+        const handleUnfriended = ({ userId }) => {
+            if (userId === friendId) {
+                // Refresh the friends list
+                fetchData();
+                setUnfriending(null);
+                // Remove the one-time listener
+                socket.off('unfriended', handleUnfriended);
+            }
+        };
+
+        // Add the one-time listener
+        socket.on('unfriended', handleUnfriended);
+
+        // Set a timeout to clear the unfriending state in case of no response
+        setTimeout(() => {
+            if (unfriending === friendId) {
+                setUnfriending(null);
+                setError('Unfriend request timed out');
+                socket.off('unfriended', handleUnfriended);
+            }
+        }, 5000);
     };
 
     return (

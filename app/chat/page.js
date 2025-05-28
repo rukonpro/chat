@@ -9,7 +9,7 @@ import NonFriendList from './components/NonFriendList';
 import MessageSection from './components/MessageSection';
 import Notification from './components/Notification';
 import Header from './components/Header';
-import { fetchWithAuth, API_BASE_URL, SOCKET_URL } from './components/utils';
+import { SOCKET_URL } from './components/utils';
 
 // Main Component
 export default function Chat() {
@@ -31,38 +31,30 @@ export default function Chat() {
     const [processing, setProcessing] = useState(null);
     const router = useRouter();
 
-    const fetchData = useCallback(async () => {
-        if (!token) return;
-        setLoading(true);
-        try {
-            const [users, receivedRequests, sentRequests] = await Promise.all([
-                fetchWithAuth(`${API_BASE_URL}/api/user`, token),
-                fetchWithAuth(`${API_BASE_URL}/api/friend-request`, token),
-                fetchWithAuth(`${API_BASE_URL}/api/friend-request/sent`, token),
-            ]);
-            setFriends(users.filter((user) => user.isFriend));
-            setNonFriends(users.filter((user) => !user.isFriend));
-            setPendingRequests(receivedRequests);
-            setPendingSentRequests(sentRequests);
-        } catch (err) {
-            setError(err.message || 'Failed to fetch data');
-        } finally {
-            setLoading(false);
-        }
-    }, [token, setLoading, setFriends, setNonFriends, setPendingRequests, setPendingSentRequests, setError]);
+    const fetchData = useCallback(() => {
+        if (!socket || !socket.connected) return;
 
-    const fetchMessages = useCallback(async (friendId) => {
-        if (!token || !friendId) return;
-        try {
-            const messages = await fetchWithAuth(
-                `${API_BASE_URL}/api/messages?friendId=${friendId}`,
-                token
-            );
-            setMessages(messages);
-        } catch (err) {
-            setError(err.message || 'Failed to fetch messages');
-        }
-    }, [token, setMessages, setError]);
+        // Only set loading to true if it's not already true
+        // This prevents unnecessary state updates that could trigger re-renders
+        setLoading(prevLoading => {
+            if (!prevLoading) return true;
+            return prevLoading;
+        });
+
+        // Request user data
+        socket.emit('getUsers');
+
+        // Request friend requests
+        socket.emit('checkFriendRequests');
+
+        // Request sent friend requests
+        socket.emit('checkSentFriendRequests');
+    }, [socket]);
+
+    const fetchMessages = useCallback((friendId) => {
+        if (!socket || !socket.connected || !friendId) return;
+        socket.emit('getMessages', { friendId });
+    }, [socket]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -88,8 +80,6 @@ export default function Chat() {
     useEffect(() => {
         if (!token || !user) return;
 
-        fetchData();
-
         const newSocket = io(SOCKET_URL, {
             auth: { token },
             reconnectionAttempts: 3,
@@ -99,13 +89,32 @@ export default function Chat() {
         newSocket.on('connect', () => {
             setSocketConnected(true);
             newSocket.emit('join', user.id);
-            // Check for pending friend requests when connected
-            newSocket.emit('checkFriendRequests');
+            // Fetch data when connected
+            if (newSocket.connected) {
+                // Request user data
+                newSocket.emit('getUsers');
+                // Request friend requests
+                newSocket.emit('checkFriendRequests');
+                // Request sent friend requests
+                newSocket.emit('checkSentFriendRequests');
+            }
         });
 
         newSocket.on('connect_error', (err) => {
             setSocketConnected(false);
             setError('Failed to connect to real-time server');
+        });
+
+        // Listen for user data updates
+        newSocket.on('users', (users) => {
+            setFriends(users.filter((user) => user.isFriend));
+            setNonFriends(users.filter((user) => !user.isFriend));
+            setLoading(false);
+        });
+
+        // Listen for messages
+        newSocket.on('messages', (messages) => {
+            setMessages(messages);
         });
 
         newSocket.on('receiveMessage', (message) => {
@@ -133,7 +142,14 @@ export default function Chat() {
                 };
 
                 // Trigger a data refresh to get complete user details
-                fetchData();
+                if (newSocket.connected) {
+                    // Request user data
+                    newSocket.emit('getUsers');
+                    // Request friend requests
+                    newSocket.emit('checkFriendRequests');
+                    // Request sent friend requests
+                    newSocket.emit('checkSentFriendRequests');
+                }
             }
 
             // Update the pending requests list
@@ -141,40 +157,38 @@ export default function Chat() {
                 if (prev.some((req) => req.id === request.id)) return prev;
                 return [...prev, request];
             });
-
-            // Check for all pending requests to ensure we have the complete list
-            newSocket.emit('checkFriendRequests');
         });
 
-        newSocket.on('friendRequestAccepted', ({ requestId, receiverId }) => {
-            // Still fetch data to update a friend's list, but don't block UI update
-            fetchData();
-            if (selectedFriendId === receiverId) {
-                fetchMessages(receiverId);
+        newSocket.on('friendRequestAccepted', ({ requestId, senderId, friendship }) => {
+            // Fetch updated user data
+            newSocket.emit('getUsers');
+
+            if (selectedFriendId === senderId) {
+                newSocket.emit('getMessages', { friendId: senderId });
             }
 
             // Update a pending requests list by removing the accepted request
             setPendingRequests(prev => prev.filter(req => req.id !== requestId));
-
-            // Check for all pending requests to ensure we have the complete list
-            newSocket.emit('checkFriendRequests');
         });
 
         // Listen for rejected friend requests
         newSocket.on('friendRequestRejected', ({ requestId }) => {
             // Update a pending requests list by removing the rejected request
             setPendingRequests(prev => prev.filter(req => req.id !== requestId));
-
-            // Check for all pending requests to ensure we have the complete list
-            newSocket.emit('checkFriendRequests');
         });
 
-        // These events are now handled in the NonFriendList component
+        // Listen for cancelled friend requests
+        newSocket.on('friendRequestCancelled', ({ requestId }) => {
+            // Update sent requests list
+            newSocket.emit('checkSentFriendRequests');
+        });
 
         newSocket.on('friendshipCreated', ({ friendshipId, senderId }) => {
-            fetchData();
+            // Fetch updated user data
+            newSocket.emit('getUsers');
+
             if (selectedFriendId === senderId) {
-                fetchMessages(senderId);
+                newSocket.emit('getMessages', { friendId: senderId });
             }
         });
 
@@ -196,23 +210,35 @@ export default function Chat() {
             setPendingSentRequests(requests);
         });
 
+        // Listen for friend request errors
+        newSocket.on('friendRequestError', ({ message }) => {
+            setError(message);
+        });
+
         setSocket(newSocket);
 
         return () => {
+            newSocket.off('users');
+            newSocket.off('messages');
+            newSocket.off('receiveMessage');
             newSocket.off('friendRequest');
             newSocket.off('friendRequests');
             newSocket.off('sentFriendRequests');
             newSocket.off('friendRequestAccepted');
             newSocket.off('friendRequestRejected');
+            newSocket.off('friendRequestCancelled');
+            newSocket.off('friendshipCreated');
+            newSocket.off('userStatus');
+            newSocket.off('friendRequestError');
             newSocket.disconnect();
         };
-    }, [token, user, fetchData, fetchMessages, selectedFriendId]);
+    }, [token, user, selectedFriendId]);
 
     useEffect(() => {
-        if (selectedFriendId) {
-            fetchMessages(selectedFriendId);
+        if (selectedFriendId && socket && socket.connected) {
+            socket.emit('getMessages', { friendId: selectedFriendId });
         }
-    }, [selectedFriendId, token, fetchMessages]);
+    }, [selectedFriendId, socket]);
 
     // Set default selectedFriendId to the first friend in the list when friends are loaded
     useEffect(() => {
@@ -253,6 +279,7 @@ export default function Chat() {
                         token={token}
                         setError={setError}
                         fetchData={fetchData}
+                        socket={socket}
                     />
                     <NonFriendList
                         nonFriends={nonFriends}
@@ -278,6 +305,7 @@ export default function Chat() {
                                 token={token}
                                 setError={setError}
                                 fetchData={fetchData}
+                                socket={socket}
                             />
                             <NonFriendList
                                 nonFriends={nonFriends}
@@ -313,6 +341,7 @@ export default function Chat() {
                         setPendingRequests={setPendingRequests}
                         processing={processing}
                         setProcessing={setProcessing}
+                        socket={socket}
                     />
                 </aside>
             </div>
@@ -341,6 +370,7 @@ export default function Chat() {
                     notificationDrawerOpen={notificationDrawerOpen}
                     processing={processing}
                     setProcessing={setProcessing}
+                    socket={socket}
                     isMobile={true}
                 />
             )}
@@ -376,6 +406,7 @@ export default function Chat() {
                             token={token}
                             setError={setError}
                             fetchData={fetchData}
+                            socket={socket}
                         />
                     </div>
                 </div>

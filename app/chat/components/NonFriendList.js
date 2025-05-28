@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchWithAuth, API_BASE_URL } from './utils';
 
 const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetchData, setPendingSentRequests, socket }) => {
     const [sending, setSending] = useState(null);
@@ -32,53 +31,48 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
         };
     }, [socket, setPendingSentRequests]);
 
-    const sendFriendRequest = async (receiverId) => {
+    const sendFriendRequest = (receiverId) => {
         if (pendingSentRequests.some((req) => req.receiverId === receiverId)) {
             return;
         }
-        setSending(receiverId);
-        try {
-            const response = await fetchWithAuth(`${API_BASE_URL}/api/friend-request`, token, {
-                method: 'POST',
-                body: JSON.stringify({ receiverId }),
-            });
 
-            // Update UI immediately without calling fetchData()
-            // The socket event will handle the real-time update, but we'll also update it here for immediate feedback
-            if (response && response.friendRequest) {
-                setPendingSentRequests(prev => {
-                    // Check if the request is already in the list to avoid duplicates
-                    if (prev.some(req => req.id === response.friendRequest.id)) {
-                        return prev;
-                    }
-                    return [...prev, response.friendRequest];
-                });
-            }
-        } catch (err) {
-            if (err.message !== 'Request already sent') {
-                setError(err.message || 'Failed to send request');
-            }
-        } finally {
-            setSending(null);
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
+            return;
         }
+
+        setSending(receiverId);
+
+        // Emit the sendFriendRequest event
+        socket.emit('sendFriendRequest', { receiverId });
+
+        // Set a timeout to clear the sending state in case of no response
+        setTimeout(() => {
+            if (sending === receiverId) {
+                setSending(null);
+                setError('Friend request timed out');
+            }
+        }, 5000);
     };
 
-    const cancelFriendRequest = async (requestId) => {
-        setCanceling(requestId);
-        try {
-            await fetchWithAuth(`${API_BASE_URL}/api/friend-request/cancel`, token, {
-                method: 'POST',
-                body: JSON.stringify({ requestId }),
-            });
-
-            // Update UI immediately without calling fetchData()
-            // The socket event will handle the real-time update, but we'll also update it here for immediate feedback
-            setPendingSentRequests(prev => prev.filter(req => req.id !== requestId));
-        } catch (err) {
-            setError(err.message || 'Failed to cancel request');
-        } finally {
-            setCanceling(null);
+    const cancelFriendRequest = (requestId) => {
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
+            return;
         }
+
+        setCanceling(requestId);
+
+        // Emit the cancelFriendRequest event
+        socket.emit('cancelFriendRequest', { requestId });
+
+        // Set a timeout to clear the canceling state in case of no response
+        setTimeout(() => {
+            if (canceling === requestId) {
+                setCanceling(null);
+                setError('Cancel request timed out');
+            }
+        }, 5000);
     };
 
     return (

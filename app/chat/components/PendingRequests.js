@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { fetchWithAuth, API_BASE_URL } from './utils';
 
 const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests, setError, socket }) => {
     const [processing, setProcessing] = useState(null);
@@ -31,38 +30,44 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
         };
     }, [socket, setPendingRequests]);
 
-    const acceptFriendRequest = async (requestId) => {
-        setProcessing(requestId);
-        try {
-            await fetchWithAuth(`${API_BASE_URL}/api/friend-request/accept`, token, {
-                method: 'POST',
-                body: JSON.stringify({ requestId }),
-            });
-            // The UI will be updated by the socket event, but we'll also update it here for immediate feedback
-            setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
-            // Fetch data to update the friends list
-            await fetchData();
-        } catch (err) {
-            setError(err.message || 'Failed to accept request');
-        } finally {
-            setProcessing(null);
+    const acceptFriendRequest = (requestId) => {
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
+            return;
         }
+
+        setProcessing(requestId);
+
+        // Emit the acceptFriendRequest event
+        socket.emit('acceptFriendRequest', { requestId });
+
+        // Set a timeout to clear the processing state in case of no response
+        setTimeout(() => {
+            if (processing === requestId) {
+                setProcessing(null);
+                setError('Accept request timed out');
+            }
+        }, 5000);
     };
 
-    const rejectFriendRequest = async (requestId) => {
-        setProcessing(requestId);
-        try {
-            await fetchWithAuth(`${API_BASE_URL}/api/friend-request/reject`, token, {
-                method: 'POST',
-                body: JSON.stringify({ requestId }),
-            });
-            // The UI will be updated by the socket event, but we'll also update it here for immediate feedback
-            setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
-        } catch (err) {
-            setError(err.message || 'Failed to reject request');
-        } finally {
-            setProcessing(null);
+    const rejectFriendRequest = (requestId) => {
+        if (!socket || !socket.connected) {
+            setError('Not connected to server');
+            return;
         }
+
+        setProcessing(requestId);
+
+        // Emit the rejectFriendRequest event
+        socket.emit('rejectFriendRequest', { requestId });
+
+        // Set a timeout to clear the processing state in case of no response
+        setTimeout(() => {
+            if (processing === requestId) {
+                setProcessing(null);
+                setError('Reject request timed out');
+            }
+        }, 5000);
     };
 
     return (
