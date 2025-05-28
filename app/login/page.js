@@ -1,29 +1,58 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from "next/link";
+import { validateLoginForm } from '@/lib/validation';
 
 export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
+    const [formErrors, setFormErrors] = useState({});
+    const [serverError, setServerError] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
+    // Handle input changes
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            [name]: value
+        });
+
+        // Clear error for this field when user starts typing
+        if (formErrors[name]) {
+            setFormErrors({
+                ...formErrors,
+                [name]: ''
+            });
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+        setServerError('');
+
+        // Validate form
+        const validation = validateLoginForm(formData);
+        if (!validation.isValid) {
+            setFormErrors(validation.errors);
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:3000/api/auth/login', {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify(formData),
             });
 
             const data = await res.json();
-            console.log(data);
 
             if (!res.ok) {
                 throw new Error(data.message || 'Login failed');
@@ -36,7 +65,12 @@ export default function Login() {
             // Redirect to chat page
             router.push('/chat');
         } catch (err) {
-            setError(err.message);
+            // Handle different types of errors
+            if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                setServerError('Network error. Please check your connection.');
+            } else {
+                setServerError(err.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -46,7 +80,7 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
                 <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
-                {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+                {serverError && <p className="text-red-500 text-center mb-4">{serverError}</p>}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -55,12 +89,17 @@ export default function Login() {
                         <input
                             type="email"
                             id="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                                formErrors.email ? 'border-red-500' : ''
+                            }`}
                             placeholder="Enter your email"
-                            required
                         />
+                        {formErrors.email && (
+                            <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                        )}
                     </div>
                     <div className="mb-6">
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700">
@@ -69,12 +108,17 @@ export default function Login() {
                         <input
                             type="password"
                             id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                                formErrors.password ? 'border-red-500' : ''
+                            }`}
                             placeholder="Enter your password"
-                            required
                         />
+                        {formErrors.password && (
+                            <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
+                        )}
                     </div>
                     <button
                         type="submit"

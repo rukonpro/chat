@@ -1,33 +1,61 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { validateRegisterForm } from '@/lib/validation';
 
 export default function Register() {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+    });
+    const [formErrors, setFormErrors] = useState({});
+    const [serverError, setServerError] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
+    // Handle input changes
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData({
+            ...formData,
+            [name]: value
+        });
+
+        // Clear error for this field when user starts typing
+        if (formErrors[name]) {
+            setFormErrors({
+                ...formErrors,
+                [name]: ''
+            });
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setLoading(true);
+        setServerError('');
 
-        // Input validation
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            setLoading(false);
+        // Validate form
+        const validation = validateRegisterForm(formData);
+        if (!validation.isValid) {
+            setFormErrors(validation.errors);
             return;
         }
 
+        setLoading(true);
+
         try {
-            const res = await fetch('http://localhost:3000/api/auth/register', {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
+                body: JSON.stringify({
+                    name: formData.name,
+                    email: formData.email,
+                    password: formData.password
+                }),
             });
 
             const data = await res.json();
@@ -36,14 +64,23 @@ export default function Register() {
                 throw new Error(data.message || 'Registration failed');
             }
 
-            // Save JWT token and user data
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            // Save JWT token and user data if provided
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+            }
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
 
-            // Redirect to chat page
-            router.push('/chat');
+            // Redirect to chat page or login page based on response
+            router.push(data.token ? '/chat' : '/login');
         } catch (err) {
-            setError(err.message);
+            // Handle different types of errors
+            if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                setServerError('Network error. Please check your connection.');
+            } else {
+                setServerError(err.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -53,7 +90,7 @@ export default function Register() {
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
                 <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
-                {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+                {serverError && <p className="text-red-500 text-center mb-4">{serverError}</p>}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -62,12 +99,17 @@ export default function Register() {
                         <input
                             type="text"
                             id="name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                                formErrors.name ? 'border-red-500' : ''
+                            }`}
                             placeholder="Enter your name"
-                            required
                         />
+                        {formErrors.name && (
+                            <p className="mt-1 text-sm text-red-500">{formErrors.name}</p>
+                        )}
                     </div>
                     <div className="mb-4">
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -76,12 +118,17 @@ export default function Register() {
                         <input
                             type="email"
                             id="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                                formErrors.email ? 'border-red-500' : ''
+                            }`}
                             placeholder="Enter your email"
-                            required
                         />
+                        {formErrors.email && (
+                            <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                        )}
                     </div>
                     <div className="mb-4">
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700">
@@ -90,12 +137,17 @@ export default function Register() {
                         <input
                             type="password"
                             id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                                formErrors.password ? 'border-red-500' : ''
+                            }`}
                             placeholder="Enter your password"
-                            required
                         />
+                        {formErrors.password && (
+                            <p className="mt-1 text-sm text-red-500">{formErrors.password}</p>
+                        )}
                     </div>
                     <div className="mb-6">
                         <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
@@ -104,12 +156,17 @@ export default function Register() {
                         <input
                             type="password"
                             id="confirmPassword"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                                formErrors.confirmPassword ? 'border-red-500' : ''
+                            }`}
                             placeholder="Enter password again"
-                            required
                         />
+                        {formErrors.confirmPassword && (
+                            <p className="mt-1 text-sm text-red-500">{formErrors.confirmPassword}</p>
+                        )}
                     </div>
                     <button
                         type="submit"
@@ -123,9 +180,9 @@ export default function Register() {
                 </form>
                 <p className="mt-4 text-center text-sm text-gray-600">
                     Already have an account?{' '}
-                    <a href="/login" className="text-sky-500 hover:underline">
+                    <Link href="/login" className="text-sky-500 hover:underline">
                         Login
-                    </a>
+                    </Link>
                 </p>
             </div>
         </div>

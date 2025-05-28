@@ -11,6 +11,12 @@ import Notification from './components/Notification';
 import Header from './components/Header';
 import { SOCKET_URL } from './components/utils';
 
+// Utility function to play notification sound
+const playNotificationSound = () => {
+    const audio = new Audio('/notification.mp3');
+    audio.play().catch(e => console.log('Error playing notification sound:', e));
+};
+
 // Main Component
 export default function Chat() {
     const [socket, setSocket] = useState(null);
@@ -21,7 +27,13 @@ export default function Chat() {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [pendingSentRequests, setPendingSentRequests] = useState([]);
     const [messages, setMessages] = useState([]);
-    const [selectedFriendId, setSelectedFriendId] = useState(null);
+    const [selectedFriendId, setSelectedFriendId] = useState(() => {
+        // Try to get the selected friend ID from localStorage
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('selectedFriendId') || null;
+        }
+        return null;
+    });
     const [content, setContent] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
@@ -59,6 +71,7 @@ export default function Chat() {
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('selectedFriendId');
         socket?.disconnect();
         router.push('/login');
     };
@@ -97,6 +110,10 @@ export default function Chat() {
                 newSocket.emit('checkFriendRequests');
                 // Request sent friend requests
                 newSocket.emit('checkSentFriendRequests');
+                // Fetch messages for selected friend if available
+                if (selectedFriendId) {
+                    newSocket.emit('getMessages', { friendId: selectedFriendId });
+                }
             }
         });
 
@@ -120,6 +137,13 @@ export default function Chat() {
         newSocket.on('receiveMessage', (message) => {
             setMessages((prev) => {
                 if (prev.some((msg) => msg.id === message.id)) return prev;
+
+                // Only play notification sound if the message is from someone else
+                if (message.senderId !== user.id) {
+                    // Play notification sound
+                    playNotificationSound();
+                }
+
                 return [...prev, message];
             });
         });
@@ -129,9 +153,8 @@ export default function Chat() {
             // Show notification
             setError(`New friend request from ${request.sender?.name || 'someone'}!`);
 
-            // Play notification sound if available
-            const audio = new Audio('/notification.mp3');
-            audio.play().catch(e => console.log('Error playing notification sound:', e));
+            // Play notification sound
+            playNotificationSound();
 
             // If the request doesn't include sender details, add a placeholder
             if (!request.sender) {
@@ -167,6 +190,12 @@ export default function Chat() {
                 newSocket.emit('getMessages', { friendId: senderId });
             }
 
+            // Play notification sound
+            playNotificationSound();
+
+            // Show notification
+            setError('Friend request accepted!');
+
             // Update a pending requests list by removing the accepted request
             setPendingRequests(prev => prev.filter(req => req.id !== requestId));
         });
@@ -190,6 +219,12 @@ export default function Chat() {
             if (selectedFriendId === senderId) {
                 newSocket.emit('getMessages', { friendId: senderId });
             }
+
+            // Play notification sound
+            playNotificationSound();
+
+            // Show notification
+            setError('New friendship created!');
         });
 
         newSocket.on('userStatus', ({ userId, isOnline }) => {
@@ -235,10 +270,10 @@ export default function Chat() {
     }, [token, user, selectedFriendId]);
 
     useEffect(() => {
-        if (selectedFriendId && socket && socket.connected) {
+        if (selectedFriendId && socket && socketConnected) {
             socket.emit('getMessages', { friendId: selectedFriendId });
         }
-    }, [selectedFriendId, socket]);
+    }, [selectedFriendId, socket, socketConnected]);
 
     // Set default selectedFriendId to the first friend in the list when friends are loaded
     useEffect(() => {
@@ -246,6 +281,13 @@ export default function Chat() {
             setSelectedFriendId(friends[0].id);
         }
     }, [friends, selectedFriendId]);
+
+    // Save selectedFriendId to localStorage when it changes
+    useEffect(() => {
+        if (selectedFriendId) {
+            localStorage.setItem('selectedFriendId', selectedFriendId);
+        }
+    }, [selectedFriendId]);
 
     if (loading) {
         return (

@@ -15,7 +15,6 @@ export async function GET(request) {
 
         const { searchParams } = new URL(request.url);
         const friendId = searchParams.get('friendId');
-        console.log(userId);
 
         if (!friendId) {
             return NextResponse.json({ message: 'friendId is required' }, { status: 400 });

@@ -1,33 +1,7 @@
 import prisma from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 import { NextResponse } from 'next/server';
-
-// Utility function for retrying Prisma operations that might encounter transaction conflicts
-const retryOperation = async (operation, maxRetries = 3, initialDelay = 100) => {
-    let retries = maxRetries;
-    let delay = initialDelay;
-
-    while (retries > 0) {
-        try {
-            return await operation();
-        } catch (error) {
-            // If it's a transaction conflict (P2034) and we have retries left
-            if (error.code === 'P2034' && retries > 0) {
-                console.log(`Transaction conflict. Retrying... (${retries} attempts left)`);
-                // Wait for the specified delay
-                await new Promise(resolve => setTimeout(resolve, delay));
-                // Decrease retries and increase delay for next attempt
-                retries--;
-                delay *= 2; // Exponential backoff
-            } else {
-                // If it's not a transaction conflict or we're out of retries, throw the error
-                throw error;
-            }
-        }
-    }
-
-    throw new Error('Operation failed after maximum retry attempts');
-};
+import { retryOperation } from '@/lib/prismaUtils';
 
 export async function GET(request) {
     const token = request.headers.get('authorization')?.split(' ')[1];
