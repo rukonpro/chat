@@ -57,7 +57,7 @@ const MessageSection = ({
         <main className={`flex-1 flex-col relative ${className || 'flex'}`}>
             {selectedFriendId ? (
                 <>
-                    <div className="bg-white p-4 border-b flex items-center">
+                    <div className="bg-white p-4 border-b border-sky-500 flex items-center">
                         <button 
                             onClick={() => setSelectedFriendId(null)} 
                             className="md:hidden mr-2 p-1 rounded-full hover:bg-gray-200"
@@ -99,7 +99,7 @@ const MessageSection = ({
                     </div>
                     <div 
                         ref={messagesContainerRef} 
-                        className="flex-1 overflow-y-auto p-2 sm:p-4 pb-20 bg-gray-50"
+                        className="flex-1 overflow-y-auto p-2 sm:p-4 mb-36 bg-gray-50"
                         style={{ maxHeight: 'calc(100vh - 200px)' }}
                     >
                             {filteredMessages.map((msg) => (
@@ -128,14 +128,14 @@ const MessageSection = ({
                                 </div>
                             ))}
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-white p-2 sm:p-4 border-t z-10">
-                        <div className="flex space-x-2">
-                            <input
+                    <div className="absolute bottom-0 left-0 right-0 bg-white p-2 sm:p-4 border-t border-sky-500 z-10">
+                        <div className="flex space-x-2 py-8">
+                            <textarea
                                 type="text"
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                                className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm sm:text-base"
+                                className="flex-1 p-2 border border-sky-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm sm:text-base"
                                 placeholder="Type a message..."
                             />
                             <button
@@ -143,9 +143,9 @@ const MessageSection = ({
                                 disabled={!content.trim()}
                                 className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base ${
                                     content.trim()
-                                        ? 'bg-sky-500 hover:bg-sky-600'
-                                        : 'bg-gray-400 cursor-not-allowed'
-                                } text-white`}
+                                        ? 'bg-sky-500 text-white hover:bg-sky-600'
+                                        : 'bg-sky-100 text-sky-500 cursor-not-allowed'
+                                } `}
                             >
                                 Send
                             </button>

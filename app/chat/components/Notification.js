@@ -3,10 +3,7 @@
 
 const Notification = ({
     pendingRequests,
-    token,
     setError,
-    fetchData,
-    setPendingRequests,
     setNotificationDrawerOpen,
     notificationDrawerOpen,
     processing,
@@ -55,14 +52,14 @@ const Notification = ({
     };
 
     return (
-        <div className={isMobile ? "fixed inset-0 bg-black/10 bg-opacity-50 z-50 flex justify-end lg:hidden" : ""}>
+        <div className={isMobile ? "fixed inset-0 bg-black/10 bg-opacity-50 z-50 flex justify-end lg:hidden top-[116px] sm:top-[72px]" : ""}>
             <div className={isMobile ? "bg-white w-full sm:w-96 md:w-80 h-full shadow-lg overflow-y-auto" : ""}>
-                <div className="p-4  text-sky-500 flex justify-between items-center">
+                <div className="p-4  text-sky-500 flex justify-between items-center bg-sky-100">
                     <h2 className="text-lg font-semibold">Notifications</h2>
                     {notificationDrawerOpen && (
                         <button
                             onClick={() => setNotificationDrawerOpen(false)}
-                            className="text-white hover:text-gray-200"
+                            className="text-sky-500 hover:text-sky-200"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

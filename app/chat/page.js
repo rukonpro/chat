@@ -291,7 +291,7 @@ export default function Chat() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-gray-900">
+            <div className="min-h-screen flex items-center justify-center text-sky-500">
                 Loading...
             </div>
         );
@@ -312,7 +312,7 @@ export default function Chat() {
 
             <div className="flex  flex-row flex-1 overflow-hidden">
                 {/* Left Sidebar - Desktop (always visible on md and larger screens) */}
-                <aside className="hidden md:block w-80 bg-white border-r overflow-y-auto">
+                <aside className="hidden md:block w-80 bg-white border-r border-sky-500 overflow-y-auto">
 
                     <FriendList
                         friends={friends}
@@ -374,7 +374,7 @@ export default function Chat() {
                 </div>
 
                 {/* Right Sidebar - Notification Drawer (always visible on large screens) */}
-                <aside className="hidden lg:block w-80 bg-white border-l overflow-y-auto">
+                <aside className="hidden lg:block w-80 bg-white border-l border-sky-500 overflow-y-auto">
                     <Notification 
                         pendingRequests={pendingRequests}
                         token={token}
@@ -417,40 +417,52 @@ export default function Chat() {
                 />
             )}
 
-            {/* Mobile Left Sidebar (overlay for small screens) */}
+            {/* Mobile Left Sidebar (below header, full remaining height for small screens) */}
             {leftSidebarOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-start md:hidden">
-                    <div className="bg-white w-full sm:w-80 h-full shadow-lg overflow-y-auto">
-                        <div className="p-4 bg-sky-500 text-white flex justify-between items-center">
-                            <h2 className="text-lg font-semibold">Menu</h2>
-                            <button
-                                onClick={() => setLeftSidebarOpen(false)}
-                                className="text-white hover:text-gray-200"
+                <div
+                    className="md:hidden bg-white w-full sm:w-80 shadow-lg overflow-y-auto absolute top-[116px] sm:top-[72px] left-0 z-50"
+                    style={{ height: 'calc(100vh - 64px)' }}
+                >
+                    <div className="p-4 bg-sky-100 text-sky-500 flex justify-between items-center">
+                        <h2 className="text-lg font-semibold">Menu</h2>
+                        <button
+                            onClick={() => setLeftSidebarOpen(false)}
+                            className="text-sky-500 hover:text-sky-200"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-6 w-6"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        <NonFriendList
-                            nonFriends={nonFriends}
-                            pendingSentRequests={pendingSentRequests}
-                            token={token}
-                            setError={setError}
-                            fetchData={fetchData}
-                            setPendingSentRequests={setPendingSentRequests}
-                            socket={socket}
-                        />
-                        <FriendList
-                            friends={friends}
-                            selectedFriendId={selectedFriendId}
-                            setSelectedFriendId={setSelectedFriendId}
-                            token={token}
-                            setError={setError}
-                            fetchData={fetchData}
-                            socket={socket}
-                        />
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
                     </div>
+                    <NonFriendList
+                        nonFriends={nonFriends}
+                        pendingSentRequests={pendingSentRequests}
+                        token={token}
+                        setError={setError}
+                        fetchData={fetchData}
+                        setPendingSentRequests={setPendingSentRequests}
+                        socket={socket}
+                    />
+                    <FriendList
+                        friends={friends}
+                        selectedFriendId={selectedFriendId}
+                        setSelectedFriendId={setSelectedFriendId}
+                        token={token}
+                        setError={setError}
+                        fetchData={fetchData}
+                        socket={socket}
+                    />
                 </div>
             )}
         </div>
