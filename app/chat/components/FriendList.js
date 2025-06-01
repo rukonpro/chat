@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import Image from 'next/image';
 
 const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, setError, fetchData, socket }) => {
@@ -14,40 +14,50 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
     const handleUnfriend = (e, friendId) => {
         e.stopPropagation();
         setOpenMenuId(null);
-        setUnfriending(friendId);
-
+        
         if (!socket || !socket.connected) {
             setError('Not connected to server');
-            setUnfriending(null);
             return;
         }
+        
+        setUnfriending(friendId);
+        console.log(`Unfriending user ${friendId}`);
 
         // Emit unfriend event
         socket.emit('unfriend', { friendId });
-
-        // Listen for response (one-time listener)
-        const handleUnfriended = ({ userId }) => {
-            if (userId === friendId) {
-                // Refresh the friends list
-                fetchData();
-                setUnfriending(null);
-                // Remove the one-time listener
-                socket.off('unfriended', handleUnfriended);
-            }
-        };
-
-        // Add the one-time listener
-        socket.on('unfriended', handleUnfriended);
 
         // Set a timeout to clear the unfriending state in case of no response
         setTimeout(() => {
             if (unfriending === friendId) {
                 setUnfriending(null);
                 setError('Unfriend request timed out');
-                socket.off('unfriended', handleUnfriended);
             }
         }, 5000);
     };
+
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleUnfriended = ({ userId }) => {
+            console.log(`Unfriended user ${userId}`);
+            setUnfriending(null);
+            fetchData(); // Refresh the friends list
+        };
+
+        const handleError = ({ message }) => {
+            console.error(`Socket error: ${message}`);
+            setUnfriending(null);
+            setError(message);
+        };
+
+        socket.on('unfriended', handleUnfriended);
+        socket.on('error', handleError);
+
+        return () => {
+            socket.off('unfriended', handleUnfriended);
+            socket.off('error', handleError);
+        };
+    }, [socket, fetchData, setError]);
 
     return (
         <div className="p-2 sm:p-4">

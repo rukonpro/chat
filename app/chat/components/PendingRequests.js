@@ -30,16 +30,21 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
         };
     }, [socket, setPendingRequests]);
 
-    const acceptFriendRequest = (requestId) => {
+    const acceptFriendRequest = (requestId, senderId, receiverId) => {
         if (!socket || !socket.connected) {
             setError('Not connected to server');
             return;
         }
 
         setProcessing(requestId);
+        console.log(`Accepting friend request ${requestId}`);
 
         // Emit the acceptFriendRequest event
-        socket.emit('acceptFriendRequest', { requestId });
+        socket.emit('acceptFriendRequest', {
+            requestId,
+            senderId,
+            receiverId
+        });
 
         // Set a timeout to clear the processing state in case of no response
         setTimeout(() => {
@@ -57,6 +62,7 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
         }
 
         setProcessing(requestId);
+        console.log(`Rejecting friend request ${requestId}`);
 
         // Emit the rejectFriendRequest event
         socket.emit('rejectFriendRequest', { requestId });
@@ -82,7 +88,7 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
                         <span className="text-sm sm:text-base">{req.sender.name || 'Unnamed'}</span>
                         <div className="flex space-x-1 sm:space-x-2">
                             <button
-                                onClick={() => acceptFriendRequest(req.id)}
+                                onClick={() => acceptFriendRequest(req.id, req.sender.id, req.receiver.id)}
                                 disabled={processing === req.id}
                                 className={`px-2 py-1 rounded text-xs sm:text-sm ${
                                     processing === req.id

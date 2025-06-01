@@ -100,30 +100,57 @@ export default function Chat() {
     useEffect(() => {
         if (!token || !user) return;
 
-        console.log('Initializing socket for user:', user.id);
+        console.log('Initializing socket for user:', user.id, 'with token:', token ? 'Token exists' : 'No token');
 
         const newSocket = io(SOCKET_URL, {
             auth: { token },
-            reconnectionAttempts: 3,
+            reconnectionAttempts: 5,
             reconnectionDelay: 1000,
+            timeout: 10000,
         });
 
         socketRef.current = newSocket;
         setSocket(newSocket);
 
         newSocket.on('connect', () => {
-            console.log('Socket connected:', user.id);
+            console.log('Socket connected for user:', user.id);
             setSocketConnected(true);
+
+            // Join the user's room
             newSocket.emit('join', user.id);
+            
+            // Fetch initial data
             newSocket.emit('getUsers');
             newSocket.emit('checkFriendRequests');
             newSocket.emit('checkSentFriendRequests');
         });
 
         newSocket.on('connect_error', (err) => {
-            console.log('Socket connect error:', err.message);
+            console.error('Socket connect error:', err.message);
             setSocketConnected(false);
-            setError('Failed to connect to real-time server');
+            setError('Failed to connect to real-time server: ' + err.message);
+        });
+
+        newSocket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+            setSocketConnected(false);
+
+            // Try to reconnect if the disconnection was not intentional
+            if (reason === 'io server disconnect') {
+                // The server has forcefully disconnected the socket
+                newSocket.connect();
+            }
+        });
+
+        newSocket.on('error', ({ message }) => {
+            console.error('Socket error:', message);
+            setError(message);
+        });
+
+        newSocket.on('friendRequestError', ({ message }) => {
+            console.error('Friend request error:', message);
+            setError(message);
+            setProcessing(null);
         });
 
         newSocket.on('users', (users) => {

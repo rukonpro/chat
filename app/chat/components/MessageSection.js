@@ -63,7 +63,6 @@ const MessageSection = ({
 
     const startCall = (type) => {
         if (!socket || !selectedFriendId || !userId) return;
-        console.log('Starting call:', { type, selectedFriendId });
         setCallType(type);
         setIsCaller(true);
         setIsIncoming(false);
@@ -88,7 +87,6 @@ const MessageSection = ({
                 type: item.content ? 'message' : 'call',
             }))
             .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        console.log('CombinedHistory:', history);
         return history;
     }, [messages, calls, userId, selectedFriendId]);
 

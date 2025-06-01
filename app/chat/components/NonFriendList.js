@@ -11,6 +11,7 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
 
         // Listen for sent friend requests
         const handleFriendRequestSent = (request) => {
+            setSending(null); // Clear sending state
             setPendingSentRequests((prev) => {
                 if (prev.some((req) => req.id === request.id)) return prev;
                 return [...prev, request];
@@ -19,38 +20,57 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
 
         // Listen for canceled friend requests
         const handleFriendRequestCanceled = ({ requestId }) => {
+            setCanceling(null); // Clear canceling state
             setPendingSentRequests((prev) => prev.filter((req) => req.id !== requestId));
+        };
+
+        // Listen for friend request errors
+        const handleFriendRequestError = ({ message }) => {
+            setSending(null); // Clear sending state
+            setCanceling(null); // Clear canceling state
+            setError(message);
         };
 
         socket.on('friendRequestSent', handleFriendRequestSent);
         socket.on('friendRequestCanceled', handleFriendRequestCanceled);
+        socket.on('friendRequestError', handleFriendRequestError);
 
         return () => {
             socket.off('friendRequestSent', handleFriendRequestSent);
             socket.off('friendRequestCanceled', handleFriendRequestCanceled);
+            socket.off('friendRequestError', handleFriendRequestError);
         };
-    }, [socket, setPendingSentRequests]);
+    }, [socket, setPendingSentRequests, setError]);
 
     const sendFriendRequest = (receiverId) => {
+        // Check if a request is already pending
         if (pendingSentRequests.some((req) => req.receiverId === receiverId)) {
+            setError('Friend request already sent to this user');
             return;
         }
 
-        if (!socket || !socket.connected) {
-            setError('Not connected to server');
+        // Check socket connection
+        if (!socket) {
+            setError('Socket not initialized');
+            return;
+        }
+        
+        if (!socket.connected) {
+            setError('Not connected to server. Please refresh the page.');
             return;
         }
 
         setSending(receiverId);
+        console.log(`Sending friend request to ${receiverId}`);
 
-        // Emit the sendFriendRequest event
+        // Emit the sendFriendRequest event with just the receiverId
         socket.emit('sendFriendRequest', { receiverId });
 
         // Set a timeout to clear the sending state in case of no response
         setTimeout(() => {
             if (sending === receiverId) {
                 setSending(null);
-                setError('Friend request timed out');
+                setError('Friend request timed out. Please try again.');
             }
         }, 5000);
     };
@@ -62,6 +82,7 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
         }
 
         setCanceling(requestId);
+        console.log(`Canceling friend request ${requestId}`);
 
         // Emit the cancelFriendRequest event
         socket.emit('cancelFriendRequest', { requestId });
