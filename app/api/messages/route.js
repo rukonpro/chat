@@ -1,7 +1,7 @@
 import prisma from '../../../lib/prisma';
-import { verifyToken } from '../../../lib/auth';
+import { verifyToken } from '@/lib/auth.js';
 import { NextResponse } from 'next/server';
-import { getIO } from '../../../lib/socket';
+import {initSocket} from "@/lib/socket.js";
 
 export async function GET(request) {
     const token = request.headers.get('authorization')?.split(' ')[1];
@@ -68,7 +68,7 @@ export async function POST(request) {
         });
 
         // Emit Socket.IO event
-        const io = getIO();
+        const io = initSocket();
         io.to(receiverId).emit('receiveMessage', {
             id: message.id,
             senderId,

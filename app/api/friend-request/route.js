@@ -1,7 +1,7 @@
 import prisma from '../../../lib/prisma';
-import { verifyToken } from '../../../lib/auth';
-import {getIO} from '../../../lib/socket';
+import { verifyToken } from '@/lib/auth.js';
 import { NextResponse } from 'next/server';
+import {initSocket} from "@/lib/socket.js";
 
 export async function GET(req) {
     const token = req.headers.get('authorization')?.split(' ')[1];
@@ -21,7 +21,7 @@ export async function GET(req) {
         });
 
         // Get Socket.IO instance and emit real-time event to the user
-        const io = getIO();
+        const io = initSocket();
         io.to(userId).emit('friendRequests', requests);
 
         return NextResponse.json(requests, { status: 200 });
@@ -58,7 +58,7 @@ export async function POST(request) {
             data: { senderId, receiverId, status: 'pending' },
         });
 
-        const io = getIO();
+        const io = initSocket();
         io.to(receiverId).emit('friendRequest', {
             id: friendRequest.id,
             senderId,

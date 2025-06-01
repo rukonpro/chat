@@ -1,7 +1,7 @@
 import prisma from '../../../../lib/prisma';
 import { verifyToken } from '@/lib/auth.js';
-import { getIO } from '@/lib/socket.js';
 import { NextResponse } from 'next/server';
+import {initSocket} from "@/lib/socket.js";
 
 export async function POST(request) {
     const token = request.headers.get('authorization')?.split(' ')[1];
@@ -35,7 +35,7 @@ export async function POST(request) {
             }),
         ]);
 
-        const io = getIO();
+        const io = initSocket();
         io.to(friendRequest.senderId).emit('friendRequestAccepted', {
             requestId,
             receiverId: userId,

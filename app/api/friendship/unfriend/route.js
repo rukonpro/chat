@@ -1,7 +1,7 @@
 import prisma from '../../../../lib/prisma';
-import { verifyToken } from '../../../../lib/auth';
-import { getIO } from '../../../../lib/socket';
+import { verifyToken } from '@/lib/auth.js';
 import { NextResponse } from 'next/server';
+import {initSocket} from "@/lib/socket.js";
 
 export async function POST(request) {
     const token = request.headers.get('authorization')?.split(' ')[1];
@@ -39,7 +39,7 @@ export async function POST(request) {
         });
 
         // Emit socket events to both users
-        const io = getIO();
+        const io = initSocket();
         io.to(friendId).emit('unfriended', { userId });
         io.to(userId).emit('unfriended', { userId: friendId });
 

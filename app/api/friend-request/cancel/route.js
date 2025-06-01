@@ -1,6 +1,6 @@
 import prisma from '../../../../lib/prisma';
-import { verifyToken } from '../../../../lib/auth';
-import { getIO } from '../../../../lib/socket';
+import { verifyToken } from '@/lib/auth.js';
+import { initSocket } from '@/lib/socket.js';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
@@ -27,7 +27,7 @@ export async function POST(request) {
             data: { status: 'canceled' },
         });
 
-        const io = getIO();
+        const io = initSocket();
         io.to(friendRequest.receiverId).emit('friendRequestCanceled', { 
             requestId, 
             senderId: userId 

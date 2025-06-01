@@ -1,7 +1,7 @@
 import prisma from '../../../../lib/prisma';
-import { verifyToken } from '../../../../lib/auth';
-import { getIO } from '../../../../lib/socket';
+import { verifyToken } from '@/lib/auth.js';
 import { NextResponse } from 'next/server';
+import {initSocket} from "@/lib/socket.js";
 
 export async function POST(request) {
     const token = request.headers.get('authorization')?.split(' ')[1];
@@ -27,7 +27,7 @@ export async function POST(request) {
             data: { status: 'rejected' },
         });
 
-        const io = getIO();
+        const io = initSocket();
         io.to(friendRequest.senderId).emit('friendRequestRejected', { requestId, receiverId: userId });
 
         // Also emit to the receiver for real-time updates across multiple tabs/devices

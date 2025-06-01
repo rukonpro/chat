@@ -1,8 +1,8 @@
 import prisma from '../../../lib/prisma';
-import { verifyToken } from '../../../lib/auth';
-import { getIO } from '../../../lib/socket';
+import { verifyToken } from '@/lib/auth.js';
 import { NextResponse } from 'next/server';
-import { retryOperation } from '../../../lib/prismaUtils';
+import { retryOperation } from '@/lib/prismaUtils.js';
+import {initSocket} from "@/lib/socket.js";
 
 export async function GET(request) {
     const token = request.headers.get('authorization')?.split(' ')[1];
@@ -52,7 +52,7 @@ export async function GET(request) {
         const usersWithFriendStatus = users.map((user) => {
             // If a socket connection exists for this user, they're online
             // Otherwise, they should be marked as offline regardless of DB state
-            const socketIO = getIO();
+            const socketIO = initSocket();
             const sockets = socketIO.sockets?.sockets || new Map();
 
             // Check if any socket has this userId
