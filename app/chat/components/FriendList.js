@@ -39,13 +39,11 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
         if (!socket) return;
 
         const handleUnfriended = ({ userId }) => {
-            console.log(`Unfriended user ${userId}`);
             setUnfriending(null);
             fetchData(); // Refresh the friends list
         };
 
         const handleError = ({ message }) => {
-            console.error(`Socket error: ${message}`);
             setUnfriending(null);
             setError(message);
         };

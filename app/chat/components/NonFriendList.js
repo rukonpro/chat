@@ -18,8 +18,8 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
             });
         };
 
-        // Listen for canceled friend requests
-        const handleFriendRequestCanceled = ({ requestId }) => {
+        // Listen for canceled friend requests - ensure this matches socket.js
+        const handleFriendRequestCancelled = ({ requestId }) => {
             setCanceling(null); // Clear canceling state
             setPendingSentRequests((prev) => prev.filter((req) => req.id !== requestId));
         };
@@ -32,12 +32,12 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
         };
 
         socket.on('friendRequestSent', handleFriendRequestSent);
-        socket.on('friendRequestCanceled', handleFriendRequestCanceled);
+        socket.on('friendRequestCancelled', handleFriendRequestCancelled); // Updated to match backend
         socket.on('friendRequestError', handleFriendRequestError);
 
         return () => {
             socket.off('friendRequestSent', handleFriendRequestSent);
-            socket.off('friendRequestCanceled', handleFriendRequestCanceled);
+            socket.off('friendRequestCancelled', handleFriendRequestCancelled); // Updated to match backend
             socket.off('friendRequestError', handleFriendRequestError);
         };
     }, [socket, setPendingSentRequests, setError]);
@@ -84,7 +84,7 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
         setCanceling(requestId);
         console.log(`Canceling friend request ${requestId}`);
 
-        // Emit the cancelFriendRequest event
+        // Emit the cancelFriendRequest event - ensure this matches socket.js handler
         socket.emit('cancelFriendRequest', { requestId });
 
         // Set a timeout to clear the canceling state in case of no response

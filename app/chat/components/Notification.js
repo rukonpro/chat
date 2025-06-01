@@ -75,7 +75,7 @@ const Notification = ({
                                 key={req.id}
                                 className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded mb-2"
                             >
-                                <span className="text-sm sm:text-base">{req.sender.name || 'Unnamed'}</span>
+                                <span className="text-sm sm:text-base text-black">{req.sender.name || 'Unnamed'}</span>
                                 <div className="flex space-x-1 sm:space-x-2">
                                     <button
                                         onClick={() => handleAcceptRequest(req.id)}

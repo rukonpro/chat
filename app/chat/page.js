@@ -239,7 +239,7 @@ export default function Chat() {
         });
 
         newSocket.on('friendRequestCancelled', ({ requestId }) => {
-            newSocket.emit('checkSentFriendRequests');
+            setPendingSentRequests((prev) => prev.filter((req) => req.id !== requestId));
         });
 
         newSocket.on('friendshipCreated', ({ friendshipId, senderId }) => {

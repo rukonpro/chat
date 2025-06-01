@@ -9,17 +9,16 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
         if (!socket) return;
 
         // Listen for accepted friend requests
-        const handleFriendRequestAccepted = ({ requestId }) => {
+        const handleFriendRequestAccepted = ({ requestId, senderId, friendship }) => {
+            setProcessing(null); // Clear processing state
             setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
         };
 
         // Listen for rejected friend requests
         const handleFriendRequestRejected = ({ requestId }) => {
+            setProcessing(null); // Clear processing state
             setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
         };
-
-        // Note: 'friendRequest' event is now handled at the top level component
-        // to provide notifications across the entire app
 
         socket.on('friendRequestAccepted', handleFriendRequestAccepted);
         socket.on('friendRequestRejected', handleFriendRequestRejected);
@@ -39,7 +38,7 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
         setProcessing(requestId);
         console.log(`Accepting friend request ${requestId}`);
 
-        // Emit the acceptFriendRequest event
+        // Emit the acceptFriendRequest event with all required parameters
         socket.emit('acceptFriendRequest', {
             requestId,
             senderId,
