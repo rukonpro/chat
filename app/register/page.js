@@ -89,7 +89,7 @@ export default function Register() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center mb-6">Register</h2>
+                <h2 className="text-2xl font-bold text-center mb-6 text-black">Register</h2>
                 {serverError && <p className="text-red-500 text-center mb-4">{serverError}</p>}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -102,7 +102,7 @@ export default function Register() {
                             name="name"
                             value={formData.name}
                             onChange={handleChange}
-                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-black ${
                                 formErrors.name ? 'border-red-500' : ''
                             }`}
                             placeholder="Enter your name"
@@ -121,7 +121,7 @@ export default function Register() {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-black${
                                 formErrors.email ? 'border-red-500' : ''
                             }`}
                             placeholder="Enter your email"
@@ -140,7 +140,7 @@ export default function Register() {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-black${
                                 formErrors.password ? 'border-red-500' : ''
                             }`}
                             placeholder="Enter your password"
@@ -159,7 +159,7 @@ export default function Register() {
                             name="confirmPassword"
                             value={formData.confirmPassword}
                             onChange={handleChange}
-                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-black${
                                 formErrors.confirmPassword ? 'border-red-500' : ''
                             }`}
                             placeholder="Enter password again"
@@ -171,7 +171,7 @@ export default function Register() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full py-2 px-4 bg-sky-500 text-white rounded-md hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                        className={`w-full py-2 px-4 bg-sky-500 text-white rounded-md hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 text-black${
                             loading ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                     >

@@ -77,7 +77,7 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
 
     return (
         <div className="p-2 sm:p-4">
-            <h2 className="text-base sm:text-lg font-semibold mb-2">Add New Friends</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-2 text-black">Add New Friends</h2>
             {nonFriends.length > 0 ? (
                 nonFriends.map((user) => {
                     const pendingRequest = pendingSentRequests.find((req) => req.receiverId === user.id);
@@ -89,7 +89,7 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
                         >
                             <div className="flex items-center space-x-2">
                                 <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${user.isOnline ? 'bg-green-500' : 'bg-gray-500'}`} />
-                                <span className="text-sm sm:text-base">{user.name || 'Unnamed'}</span>
+                                <span className="text-sm sm:text-base text-black">{user.name || 'Unnamed'}</span>
                             </div>
                             {isPending ? (
                                 <button

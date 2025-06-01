@@ -51,7 +51,7 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
 
     return (
         <div className="p-2 sm:p-4">
-            <h2 className="text-base sm:text-lg font-semibold mb-2">Friends</h2>
+            <h2 className="text-base sm:text-lg text-black font-semibold mb-2">Friends</h2>
             {friends.length > 0 ? (
                 friends.map((friend) => (
                     <div
@@ -108,7 +108,7 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
                                     </div>
                                 )}
                             </div>
-                            <span className="text-sm sm:text-base">{friend.name || 'Unnamed'}</span>
+                            <span className="text-sm sm:text-base text-black">{friend.name || 'Unnamed'}</span>
                         </div>
 
                         {unfriending === friend.id ? (

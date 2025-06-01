@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import io from 'socket.io-client';
 
@@ -14,7 +14,7 @@ import { SOCKET_URL } from './components/utils';
 // Utility function to play notification sound
 const playNotificationSound = () => {
     const audio = new Audio('/notification.mp3');
-    audio.play().catch(e => console.log('Error playing notification sound:', e));
+    audio.play().catch((e) => console.log('Error playing notification sound:', e));
 };
 
 // Main Component
@@ -27,8 +27,8 @@ export default function Chat() {
     const [pendingRequests, setPendingRequests] = useState([]);
     const [pendingSentRequests, setPendingSentRequests] = useState([]);
     const [messages, setMessages] = useState([]);
+    const [calls, setCalls] = useState([]);
     const [selectedFriendId, setSelectedFriendId] = useState(() => {
-        // Try to get the selected friend ID from localStorage
         if (typeof window !== 'undefined') {
             return localStorage.getItem('selectedFriendId') || null;
         }
@@ -42,31 +42,36 @@ export default function Chat() {
     const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
     const [processing, setProcessing] = useState(null);
     const router = useRouter();
+    const socketRef = useRef(null); // Persist socket instance
 
     const fetchData = useCallback(() => {
         if (!socket || !socket.connected) return;
 
-        // Only set loading to true if it's not already true
-        // This prevents unnecessary state updates that could trigger re-renders
-        setLoading(prevLoading => {
+        setLoading((prevLoading) => {
             if (!prevLoading) return true;
             return prevLoading;
         });
 
-        // Request user data
         socket.emit('getUsers');
-
-        // Request friend requests
         socket.emit('checkFriendRequests');
-
-        // Request sent friend requests
         socket.emit('checkSentFriendRequests');
     }, [socket]);
 
-    const fetchMessages = useCallback((friendId) => {
-        if (!socket || !socket.connected || !friendId) return;
-        socket.emit('getMessages', { friendId });
-    }, [socket]);
+    const fetchMessages = useCallback(
+        (friendId) => {
+            if (!socket || !socket.connected || !friendId) return;
+            socket.emit('getMessages', { friendId });
+        },
+        [socket]
+    );
+
+    const fetchCallHistory = useCallback(
+        (friendId) => {
+            if (!socket || !socket.connected || !friendId) return;
+            socket.emit('getCallHistory', { friendId });
+        },
+        [socket]
+    );
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -76,6 +81,7 @@ export default function Chat() {
         router.push('/login');
     };
 
+    // Initialize user and token
     useEffect(() => {
         const storedToken = localStorage.getItem('token');
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -90,8 +96,11 @@ export default function Chat() {
         setUser(storedUser);
     }, [router]);
 
+    // Initialize socket once
     useEffect(() => {
         if (!token || !user) return;
+
+        console.log('Initializing socket for user:', user.id);
 
         const newSocket = io(SOCKET_URL, {
             auth: { token },
@@ -99,83 +108,88 @@ export default function Chat() {
             reconnectionDelay: 1000,
         });
 
+        socketRef.current = newSocket;
+        setSocket(newSocket);
+
         newSocket.on('connect', () => {
+            console.log('Socket connected:', user.id);
             setSocketConnected(true);
             newSocket.emit('join', user.id);
-            // Fetch data when connected
-            if (newSocket.connected) {
-                // Request user data
-                newSocket.emit('getUsers');
-                // Request friend requests
-                newSocket.emit('checkFriendRequests');
-                // Request sent friend requests
-                newSocket.emit('checkSentFriendRequests');
-                // Fetch messages for selected friend if available
-                if (selectedFriendId) {
-                    newSocket.emit('getMessages', { friendId: selectedFriendId });
-                }
-            }
+            newSocket.emit('getUsers');
+            newSocket.emit('checkFriendRequests');
+            newSocket.emit('checkSentFriendRequests');
         });
 
         newSocket.on('connect_error', (err) => {
+            console.log('Socket connect error:', err.message);
             setSocketConnected(false);
             setError('Failed to connect to real-time server');
         });
 
-        // Listen for user data updates
         newSocket.on('users', (users) => {
             setFriends(users.filter((user) => user.isFriend));
             setNonFriends(users.filter((user) => !user.isFriend));
             setLoading(false);
         });
 
-        // Listen for messages
         newSocket.on('messages', (messages) => {
             setMessages(messages);
+        });
+
+        newSocket.on('callHistory', (calls) => {
+            console.log('Received callHistory:', calls);
+            setCalls(calls);
+        });
+
+        newSocket.on('call-updated', ({ call }) => {
+            console.log('Call updated:', call, 'selectedFriendId:', selectedFriendId);
+            if (
+                selectedFriendId &&
+                (call.callerId === selectedFriendId || call.receiverId === selectedFriendId)
+            ) {
+                setCalls((prevCalls) => {
+                    const existingCallIndex = prevCalls.findIndex((c) => c.id === call.id);
+                    if (existingCallIndex !== -1) {
+                        const updatedCalls = [...prevCalls];
+                        updatedCalls[existingCallIndex] = call;
+                        console.log('Updated calls:', updatedCalls);
+                        return updatedCalls;
+                    } else {
+                        const newCalls = [...prevCalls, call];
+                        console.log('Added new call:', newCalls);
+                        return newCalls;
+                    }
+                });
+            } else {
+                console.log('Call not relevant for selected friend');
+            }
         });
 
         newSocket.on('receiveMessage', (message) => {
             setMessages((prev) => {
                 if (prev.some((msg) => msg.id === message.id)) return prev;
-
-                // Only play notification sound if the message is from someone else
                 if (message.senderId !== user.id) {
-                    // Play notification sound
                     playNotificationSound();
                 }
-
                 return [...prev, message];
             });
         });
 
-        // Listen for a new friend request and show notification
         newSocket.on('friendRequest', (request) => {
-            // Show notification
             setError(`New friend request from ${request.sender?.name || 'someone'}!`);
-
-            // Play notification sound
             playNotificationSound();
-
-            // If the request doesn't include sender details, add a placeholder
             if (!request.sender) {
                 request.sender = {
                     id: request.senderId,
                     name: 'New Request',
-                    email: ''
+                    email: '',
                 };
-
-                // Trigger a data refresh to get complete user details
                 if (newSocket.connected) {
-                    // Request user data
                     newSocket.emit('getUsers');
-                    // Request friend requests
                     newSocket.emit('checkFriendRequests');
-                    // Request sent friend requests
                     newSocket.emit('checkSentFriendRequests');
                 }
             }
-
-            // Update the pending requests list
             setPendingRequests((prev) => {
                 if (prev.some((req) => req.id === request.id)) return prev;
                 return [...prev, request];
@@ -183,47 +197,31 @@ export default function Chat() {
         });
 
         newSocket.on('friendRequestAccepted', ({ requestId, senderId, friendship }) => {
-            // Fetch updated user data
             newSocket.emit('getUsers');
-
             if (selectedFriendId === senderId) {
                 newSocket.emit('getMessages', { friendId: senderId });
+                newSocket.emit('getCallHistory', { friendId: senderId });
             }
-
-            // Play notification sound
             playNotificationSound();
-
-            // Show notification
             setError('Friend request accepted!');
-
-            // Update a pending requests list by removing the accepted request
-            setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+            setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
         });
 
-        // Listen for rejected friend requests
         newSocket.on('friendRequestRejected', ({ requestId }) => {
-            // Update a pending requests list by removing the rejected request
-            setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+            setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
         });
 
-        // Listen for cancelled friend requests
         newSocket.on('friendRequestCancelled', ({ requestId }) => {
-            // Update sent requests list
             newSocket.emit('checkSentFriendRequests');
         });
 
         newSocket.on('friendshipCreated', ({ friendshipId, senderId }) => {
-            // Fetch updated user data
             newSocket.emit('getUsers');
-
             if (selectedFriendId === senderId) {
                 newSocket.emit('getMessages', { friendId: senderId });
+                newSocket.emit('getCallHistory', { friendId: senderId });
             }
-
-            // Play notification sound
             playNotificationSound();
-
-            // Show notification
             setError('New friendship created!');
         });
 
@@ -235,26 +233,29 @@ export default function Chat() {
             );
         });
 
-        // Listen for friend requests list updates
         newSocket.on('friendRequests', (requests) => {
             setPendingRequests(requests);
         });
 
-        // Listen for sent friend requests list updates
         newSocket.on('sentFriendRequests', (requests) => {
             setPendingSentRequests(requests);
         });
 
-        // Listen for friend request errors
         newSocket.on('friendRequestError', ({ message }) => {
             setError(message);
         });
 
-        setSocket(newSocket);
+        newSocket.on('call-error', ({ message }) => {
+            console.log('Call error received:', message);
+            setError(message);
+        });
 
         return () => {
+            console.log('Cleaning up socket for user:', user.id);
             newSocket.off('users');
             newSocket.off('messages');
+            newSocket.off('callHistory');
+            newSocket.off('call-updated');
             newSocket.off('receiveMessage');
             newSocket.off('friendRequest');
             newSocket.off('friendRequests');
@@ -265,29 +266,20 @@ export default function Chat() {
             newSocket.off('friendshipCreated');
             newSocket.off('userStatus');
             newSocket.off('friendRequestError');
+            newSocket.off('call-error');
             newSocket.disconnect();
         };
-    }, [token, user, selectedFriendId]);
+    }, [token, user]);
 
+    // Handle friend-specific actions
     useEffect(() => {
         if (selectedFriendId && socket && socketConnected) {
+            console.log('Fetching data for friend:', selectedFriendId);
             socket.emit('getMessages', { friendId: selectedFriendId });
-        }
-    }, [selectedFriendId, socket, socketConnected]);
-
-    // Set default selectedFriendId to the first friend in the list when friends are loaded
-    // useEffect(() => {
-    //     if (friends.length > 0 && selectedFriendId === null) {
-    //         setSelectedFriendId(friends[0].id);
-    //     }
-    // }, [friends, selectedFriendId]);
-
-    // Save selectedFriendId to localStorage when it changes
-    useEffect(() => {
-        if (selectedFriendId) {
+            socket.emit('getCallHistory', { friendId: selectedFriendId });
             localStorage.setItem('selectedFriendId', selectedFriendId);
         }
-    }, [selectedFriendId]);
+    }, [selectedFriendId, socket, socketConnected]);
 
     if (loading) {
         return (
@@ -299,7 +291,7 @@ export default function Chat() {
 
     return (
         <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
-            <Header 
+            <Header
                 user={user}
                 socketConnected={socketConnected}
                 pendingRequests={pendingRequests}
@@ -310,10 +302,8 @@ export default function Chat() {
                 handleLogout={handleLogout}
             />
 
-            <div className="flex  flex-row flex-1 overflow-hidden">
-                {/* Left Sidebar - Desktop (always visible on md and larger screens) */}
+            <div className="flex flex-row flex-1 overflow-hidden">
                 <aside className="hidden md:block w-80 bg-white border-r border-sky-500 overflow-y-auto">
-
                     <FriendList
                         friends={friends}
                         selectedFriendId={selectedFriendId}
@@ -334,12 +324,9 @@ export default function Chat() {
                     />
                 </aside>
 
-                {/* Main Content - Message Section */}
                 <div className="flex-1 flex justify-center">
-                    {/* On mobile: Show a friend list when no friend is selected, otherwise show messages */}
                     {!selectedFriendId && (
                         <div className="md:hidden w-full bg-white overflow-y-auto">
-
                             <FriendList
                                 friends={friends}
                                 selectedFriendId={selectedFriendId}
@@ -362,6 +349,7 @@ export default function Chat() {
                     )}
                     <MessageSection
                         messages={messages}
+                        calls={calls}
                         userId={user?.id}
                         selectedFriendId={selectedFriendId}
                         friends={friends}
@@ -373,9 +361,8 @@ export default function Chat() {
                     />
                 </div>
 
-                {/* Right Sidebar - Notification Drawer (always visible on large screens) */}
                 <aside className="hidden lg:block w-80 bg-white border-l border-sky-500 overflow-y-auto">
-                    <Notification 
+                    <Notification
                         pendingRequests={pendingRequests}
                         token={token}
                         setError={setError}
@@ -400,9 +387,8 @@ export default function Chat() {
                 </div>
             )}
 
-            {/* Mobile Notification Drawer (overlay for small screens) */}
             {notificationDrawerOpen && (
-                <Notification 
+                <Notification
                     pendingRequests={pendingRequests}
                     token={token}
                     setError={setError}
@@ -417,7 +403,6 @@ export default function Chat() {
                 />
             )}
 
-            {/* Mobile Left Sidebar (below header, full remaining height for small screens) */}
             {leftSidebarOpen && (
                 <div
                     className="md:hidden bg-white w-full sm:w-80 shadow-lg overflow-y-auto absolute top-[116px] sm:top-[72px] left-0 z-50"

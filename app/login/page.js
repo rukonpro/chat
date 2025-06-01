@@ -79,7 +79,7 @@ export default function Login() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
-                <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
+                <h2 className="text-2xl font-bold text-center mb-6 text-black">Login</h2>
                 {serverError && <p className="text-red-500 text-center mb-4">{serverError}</p>}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -92,7 +92,7 @@ export default function Login() {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-black ${
                                 formErrors.email ? 'border-red-500' : ''
                             }`}
                             placeholder="Enter your email"
@@ -111,7 +111,7 @@ export default function Login() {
                             name="password"
                             value={formData.password}
                             onChange={handleChange}
-                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                            className={`mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 text-black ${
                                 formErrors.password ? 'border-red-500' : ''
                             }`}
                             placeholder="Enter your password"

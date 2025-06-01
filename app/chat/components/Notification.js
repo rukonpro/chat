@@ -55,7 +55,7 @@ const Notification = ({
         <div className={isMobile ? "fixed inset-0 bg-black/10 bg-opacity-50 z-50 flex justify-end lg:hidden top-[116px] sm:top-[72px]" : ""}>
             <div className={isMobile ? "bg-white w-full sm:w-96 md:w-80 h-full shadow-lg overflow-y-auto" : ""}>
                 <div className="p-4  text-sky-500 flex justify-between items-center bg-sky-100">
-                    <h2 className="text-lg font-semibold">Notifications</h2>
+                    <h2 className="text-lg  font-semibold">Notifications</h2>
                     {notificationDrawerOpen && (
                         <button
                             onClick={() => setNotificationDrawerOpen(false)}
@@ -68,7 +68,7 @@ const Notification = ({
                     )}
                 </div>
                 <div className="p-2 sm:p-4">
-                    <h3 className="text-base sm:text-lg font-semibold mb-2">Friend Requests</h3>
+                    <h3 className="text-base sm:text-lg text-black font-semibold mb-2">Friend Requests</h3>
                     {pendingRequests.length > 0 ? (
                         pendingRequests.map((req) => (
                             <div
