@@ -9,8 +9,9 @@ const PendingRequests = ({ pendingRequests, token, fetchData, setPendingRequests
         if (!socket) return;
 
         // Listen for accepted friend requests
-        const handleFriendRequestAccepted = ({ requestId }) => {
+        const handleFriendRequestAccepted = ({ requestId, friendship }) => {
             setPendingRequests((prev) => prev.filter((req) => req.id !== requestId));
+            // You might want to do something with the friendship data here
         };
 
         // Listen for rejected friend requests

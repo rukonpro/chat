@@ -25,18 +25,16 @@ const FriendList = ({ friends, selectedFriendId, setSelectedFriendId, token, set
         // Emit unfriend event
         socket.emit('unfriend', { friendId });
 
-        // Listen for response (one-time listener)
+        // Listen for response
         const handleUnfriended = ({ userId }) => {
             if (userId === friendId) {
                 // Refresh the friends list
                 fetchData();
                 setUnfriending(null);
-                // Remove the one-time listener
-                socket.off('unfriended', handleUnfriended);
             }
         };
 
-        // Add the one-time listener
+        // Add the listener
         socket.on('unfriended', handleUnfriended);
 
         // Set a timeout to clear the unfriending state in case of no response

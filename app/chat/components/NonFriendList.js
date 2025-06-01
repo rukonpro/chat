@@ -23,11 +23,11 @@ const NonFriendList = ({ nonFriends, pendingSentRequests, token, setError, fetch
         };
 
         socket.on('friendRequestSent', handleFriendRequestSent);
-        socket.on('friendRequestCanceled', handleFriendRequestCanceled);
+        socket.on('friendRequestCancelled', handleFriendRequestCanceled);
 
         return () => {
             socket.off('friendRequestSent', handleFriendRequestSent);
-            socket.off('friendRequestCanceled', handleFriendRequestCanceled);
+            socket.off('friendRequestCancelled', handleFriendRequestCanceled);
         };
     }, [socket, setPendingSentRequests]);
 
