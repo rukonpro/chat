@@ -212,6 +212,13 @@ const CallModal = ({
 
         const initMedia = async () => {
             try {
+                // Only initialize media if we're the caller or if we've explicitly accepted the call
+                if (callDirection === 'incoming' && callStatus === 'incoming') {
+                    console.log('[CallModal] Incoming call waiting for user to accept');
+                    // Don't initialize media for incoming calls until the user accepts
+                    return;
+                }
+
                 const constraints = { audio: true, video: callType === 'video' };
                 console.log('[CallModal] Requesting media with constraints:', constraints);
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -472,6 +479,9 @@ const CallModal = ({
         console.log('[CallModal] Accepting call');
         setCallStatus('connecting');
         setCallDirection('incoming'); // Explicitly set call direction
+
+        // Now that the user has accepted, we can initialize the media
+        // The useEffect will detect the status change and initialize media
     };
     const handleRejectCall = () => {
         console.log('[CallModal] Rejecting call');

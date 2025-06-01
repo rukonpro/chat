@@ -40,9 +40,11 @@ const MessageSection = ({
         }
 
         socket.on('incoming-call', (data) => {
+            console.log('Incoming call received:', data);
             setCallData(data);
             setCallType(data.callType);
             setIsIncoming(true);
+            setIsCaller(false); // Ensure we're not marked as the caller
             setShowCallModal(true);
         });
 
