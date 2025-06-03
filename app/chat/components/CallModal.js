@@ -44,6 +44,15 @@ const CallModal = ({
     onClose,
     callData,
 }) => {
+    console.log('CallModal rendered with props:', {
+        userId,
+        selectedFriendId,
+        callType,
+        isCaller,
+        isIncoming,
+        callData
+    });
+
     const [localStream, setLocalStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
     const [callStatus, setCallStatus] = useState(isIncoming ? 'incoming' : 'calling');
@@ -54,6 +63,17 @@ const CallModal = ({
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [callDirection, setCallDirection] = useState(isIncoming ? 'incoming' : 'outgoing');
 
+    // Add a debug effect to log important state changes
+    useEffect(() => {
+        console.log('CallModal state updated:', {
+            callStatus,
+            callId,
+            callDirection,
+            isIncoming,
+            isCaller
+        });
+    }, [callStatus, callId, callDirection, isIncoming, isCaller]);
+
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const peerRef = useRef(null);
@@ -62,6 +82,8 @@ const CallModal = ({
     const ringtoneRef = useRef(null);
     const remoteAudioRef = useRef(null);
     const connectTimeoutRef = useRef(null);
+    const signalSent = useRef(false);
+    const isMountedRef = useRef(true);
 
     const friend = useMemo(() =>
         friends?.find((f) => f.id === (isIncoming ? callData?.senderId : selectedFriendId)) || null,
@@ -144,6 +166,11 @@ const CallModal = ({
             timerRef.current = null;
         }
 
+        if (connectTimeoutRef.current) {
+            clearTimeout(connectTimeoutRef.current);
+            connectTimeoutRef.current = null;
+        }
+
         if (ringtoneRef.current) {
             ringtoneRef.current.pause();
             ringtoneRef.current.src = '';
@@ -152,32 +179,14 @@ const CallModal = ({
 
         if (remoteAudioRef.current) {
             remoteAudioRef.current.pause();
-            remoteAudioRef.current.srcObject = null;
+            remoteAudioRef.current.src = '';
             remoteAudioRef.current = null;
         }
 
-        if (connectTimeoutRef.current) {
-            clearTimeout(connectTimeoutRef.current);
-            connectTimeoutRef.current = null;
-        }
-
-        // Clear video references
-        if (localVideoRef.current) {
-            localVideoRef.current.srcObject = null;
-        }
-
-        if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = null;
-        }
-
-        setRemoteStream(null);
-        signalProcessed.current = false;
-
-        // Close the modal after delay if requested
+        // Close the modal after the specified delay
         if (forceClose && delay > 0) {
-            console.log(`[CallModal] Delaying modal close by ${delay}ms`);
             setTimeout(() => {
-                console.log('[CallModal] Executing delayed close');
+                console.log(`[CallModal] Closing modal after ${delay}ms delay`);
                 onClose();
             }, delay);
         } else if (forceClose) {
@@ -207,24 +216,41 @@ const CallModal = ({
     };
 
     useEffect(() => {
-        console.log(`[CallModal] initMedia useEffect triggered. callStatus: ${callStatus}, isCaller: ${isCaller}, callDirection: ${callDirection}`);
-        let isMounted = true;
+        if (!isMountedRef.current) return;
+
+        console.log('[CallModal] Call initialization effect triggered', {
+            socket: !!socket,
+            userId,
+            selectedFriendId,
+            callType,
+            callDirection,
+            callData,
+            callStatus,
+            callId
+        });
 
         const initMedia = async () => {
             try {
                 // Only initialize media if we're the caller or if we've explicitly accepted the call
                 if (callDirection === 'incoming' && callStatus === 'incoming') {
                     console.log('[CallModal] Incoming call waiting for user to accept');
-                    // Don't initialize media for incoming calls until the user accepts
                     return;
                 }
 
                 const constraints = { audio: true, video: callType === 'video' };
                 console.log('[CallModal] Requesting media with constraints:', constraints);
+
+                // Check if component is still mounted before proceeding
+                if (!isMountedRef.current) {
+                    console.log('[CallModal] Component unmounted before media request, aborting');
+                    return;
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-                if (!isMounted) {
-                    console.log('[CallModal] Component unmounted before media initialized, cleaning up stream');
+                // Check again if component is still mounted
+                if (!isMountedRef.current) {
+                    console.log('[CallModal] Component unmounted after media obtained, cleaning up stream');
                     stream.getTracks().forEach(track => track.stop());
                     return;
                 }
@@ -244,6 +270,7 @@ const CallModal = ({
                         iceServers: [
                             { urls: 'stun:stun.l.google.com:19302' },
                             { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' },
                         ],
                     },
                 });
@@ -251,26 +278,30 @@ const CallModal = ({
                 console.log(`[CallModal] Created new peer. Initiator: ${callDirection === 'outgoing'}`);
                 peerRef.current = peer;
 
-                // Set up timeout for connection
+                // Set up timeout for connection - reduce from 30s to 15s
                 if (callStatus === 'calling' || callStatus === 'connecting') {
                     if (connectTimeoutRef.current) {
                         clearTimeout(connectTimeoutRef.current);
                     }
 
                     connectTimeoutRef.current = setTimeout(() => {
-                        if (isMounted && (callStatus === 'calling' || callStatus === 'connecting')) {
+                        if (!isMountedRef.current) return;
+
+                        if ((callStatus === 'calling' || callStatus === 'connecting')) {
                             console.log('[CallModal] Connection timed out');
                             setCallStatus('error');
-                            setError('Connection timed out after 30 seconds');
+                            setError('Connection timed out. Please try again.');
                             cleanupResources(0, 'connection timeout', true);
                         }
-                    }, 30000); // 30-second timeout
+                    }, 15000); // 15-second timeout instead of 30
                 }
 
                 peer.on('signal', (data) => {
-                    console.log(`[CallModal] Peer signal generated. Direction: ${callDirection}, signalData:`, data);
+                    if (!isMountedRef.current) return;
 
-                    if (callDirection === 'outgoing') {
+                    console.log(`[CallModal] Peer signal generated. Direction: ${callDirection}, Status: ${callStatus}`);
+
+                    if (callDirection === 'outgoing' && !signalSent.current) {
                         console.log('[CallModal] Emitting call-user signal');
                         socket.emit('call-user', {
                             senderId: userId,
@@ -278,14 +309,27 @@ const CallModal = ({
                             signalData: data,
                             callType
                         });
-                    } else {
-                        console.log('[CallModal] Emitting accept-call signal');
+                        signalSent.current = true;
+                    } else if (callDirection === 'incoming' && callStatus === 'connecting' && !signalSent.current) {
+                        // Make sure we have a valid callId
+                        const currentCallId = callData?.callId || callId;
+                        if (!currentCallId) {
+                            console.error('[CallModal] Cannot accept call: missing call ID');
+                            setCallStatus('error');
+                            setError('Cannot accept call: missing call information');
+                            return;
+                        }
+
+                        console.log('[CallModal] Emitting accept-call signal for call:', currentCallId);
                         socket.emit('accept-call', {
                             signalData: data,
                             senderId: userId,
-                            receiverId: callData.senderId,
-                            callId: callData.callId
+                            receiverId: callData?.senderId,
+                            callId: currentCallId
                         });
+                        signalSent.current = true;
+                    } else {
+                        console.log('[CallModal] Skipping duplicate signal emission');
                     }
                 });
 
@@ -306,6 +350,8 @@ const CallModal = ({
                         setRemoteStream(remoteStream);
                         if (remoteVideoRef.current && callType === 'video') {
                             remoteVideoRef.current.srcObject = remoteStream;
+                        } else if (callType === 'audio') {
+                            remoteAudioRef.current = setupAudioOutput(remoteStream);
                         }
                         setCallStatus('connected');
                         if (connectTimeoutRef.current) {
@@ -335,9 +381,9 @@ const CallModal = ({
                     }
                 });
 
-                // Process incoming call signal if this is an incoming call
-                if (callDirection === 'incoming' && callData && callData.signalData) {
-                    console.log('[CallModal] Processing incoming call signal:', callData.signalData);
+                // Process incoming call signal if this is an incoming call that was accepted
+                if (callDirection === 'incoming' && callData && callData.signalData && callStatus === 'connecting') {
+                    console.log('[CallModal] Processing incoming call signal for accepted call');
                     try {
                         peer.signal(callData.signalData);
                     } catch (err) {
@@ -348,27 +394,28 @@ const CallModal = ({
                         }
                     }
                 }
+
+                return () => {
+                    isMounted = false;
+                };
             } catch (err) {
                 console.error('[CallModal] Failed to access media:', err.message);
-                if (isMounted) {
-                    setCallStatus('error');
-                    setError('Failed to access microphone or camera: ' + err.message);
-                }
+                setCallStatus('error');
+                setError('Failed to access microphone or camera: ' + err.message);
             }
         };
 
-        if (['incoming', 'calling', 'connecting'].includes(callStatus)) {
+        if (['calling', 'connecting'].includes(callStatus)) {
             initMedia();
         }
 
         return () => {
-            isMounted = false;
             console.log('[CallModal] initMedia useEffect cleanup triggered');
             if (['rejected', 'ended', 'error'].includes(callStatus)) {
                 cleanupResources(0, 'initMedia useEffect cleanup', false);
             }
         };
-    }, [socket, userId, selectedFriendId, callType, callDirection, callData, callStatus]);
+    }, [socket, userId, selectedFriendId, callType, callDirection, callData, callStatus, callId]);
 
     useEffect(() => {
         if (callStatus === 'connected') {
@@ -390,14 +437,25 @@ const CallModal = ({
 
         const handleCallInitiated = ({ callId }) => {
             console.log(`[CallModal] Call initiated. callId: ${callId}`);
+            if (!callId) {
+                console.error('[CallModal] Received call-initiated event without callId');
+                return;
+            }
+
             setCallId(callId);
+
+            // If we already have a call ID but received a different one, log it
+            if (callId && callId !== callId && callId !== null) {
+                console.log(`[CallModal] Received different callId: ${callId} (current: ${callId})`);
+            }
         };
         
         const handleAcceptCall = (data) => {
             console.log('[CallModal] Accept-call event received:', data);
-            if (peerRef.current) {
+            if (peerRef.current && data.signalData) {
                 try {
                     peerRef.current.signal(data.signalData);
+                    setCallStatus('connecting');
                 } catch (err) {
                     console.error('[CallModal] Failed to process accept-call signal:', err.message);
                     setCallStatus('error');
@@ -424,9 +482,28 @@ const CallModal = ({
 
         const handleCallError = ({ message }) => {
             console.log(`[CallModal] Call-error event received: ${message}`);
+
+            // Ignore the "There is already an active call" error
+            if (message === 'There is already an active call with this user') {
+                console.log('[CallModal] Ignoring "already active call" error');
+                return; // Don't close the modal for this error
+            }
+
             setCallStatus('error');
             setError(message);
-            cleanupResources(0, 'call-error event', true);
+            cleanupResources(2000, 'call-error event', true);
+        };
+
+        // Add incoming call handler directly in CallModal as a backup
+        const handleIncomingCall = (data) => {
+            console.log('[CallModal] Incoming call event received directly in CallModal:', {
+                ...data,
+                signalData: data.signalData ? 'Signal data exists' : 'No signal data'
+            });
+            if (isIncoming && callData?.callId === data.callId) {
+                // Update call data if this is for the current call
+                setCallData(data);
+            }
         };
 
         console.log('[CallModal] Setting up socket event listeners');
@@ -435,6 +512,7 @@ const CallModal = ({
         socket.on('reject-call', handleRejectCall);
         socket.on('end-call', handleEndCall);
         socket.on('call-error', handleCallError);
+        socket.on('incoming-call', handleIncomingCall); // Add direct handler for incoming calls
 
         return () => {
             console.log('[CallModal] Removing socket event listeners');
@@ -443,49 +521,107 @@ const CallModal = ({
             socket.off('reject-call', handleRejectCall);
             socket.off('end-call', handleEndCall);
             socket.off('call-error', handleCallError);
+            socket.off('incoming-call', handleIncomingCall);
         };
-    }, [socket, callDirection]);
+    }, [socket, callDirection, isIncoming, callData]);
 
     useEffect(() => {
+        if (!isMountedRef.current) return;
+
         let ringtoneFile = null;
-        if (isIncoming && callStatus === 'incoming') {
+
+        if (callStatus === 'incoming') {
             ringtoneFile = '/call-ringtone.mp3';
-        } else if (isCaller && callStatus === 'calling') {
+        } else if (callStatus === 'calling') {
             ringtoneFile = '/calling-sound.mp3';
         }
 
-        if (ringtoneFile) {
+        // Only create a new audio element if we don't already have one
+        // and if we have a valid ringtone file to play
+        if (ringtoneFile && !ringtoneRef.current) {
             console.log(`[CallModal] Playing ringtone: ${ringtoneFile}`);
-            const audio = new Audio(ringtoneFile);
-            ringtoneRef.current = audio;
-            audio.loop = true;
-            audio.play().catch((e) => console.log('[CallModal] Error playing ringtone:', e));
+
+            try {
+                const audio = new Audio(ringtoneFile);
+                audio.loop = true;
+                ringtoneRef.current = audio;
+
+                // Add error handling for audio playback
+                const playPromise = audio.play();
+
+                if (playPromise !== undefined) {
+                    playPromise.catch((e) => {
+                        console.log('[CallModal] Error playing ringtone:', e);
+                        // Don't try to auto-play again, as it might be blocked by browser policy
+                    });
+                }
+            } catch (error) {
+                console.error('[CallModal] Failed to create audio element:', error);
+            }
+        }
+
+        // Stop ringtone when call is connected, rejected, or ended
+        if (['connected', 'rejected', 'ended', 'error'].includes(callStatus) && ringtoneRef.current) {
+            console.log('[CallModal] Stopping ringtone due to status change');
+            try {
+                ringtoneRef.current.pause();
+                ringtoneRef.current = null;
+            } catch (error) {
+                console.error('[CallModal] Error stopping ringtone:', error);
+            }
         }
 
         return () => {
             if (ringtoneRef.current) {
-                console.log('[CallModal] Stopping ringtone');
-                ringtoneRef.current.pause();
-                ringtoneRef.current = null;
+                console.log('[CallModal] Stopping ringtone in cleanup');
+                try {
+                    ringtoneRef.current.pause();
+                    ringtoneRef.current = null;
+                } catch (error) {
+                    console.error('[CallModal] Error stopping ringtone in cleanup:', error);
+                }
             }
         };
-    }, [callStatus, isCaller, isIncoming]);
+    }, [callStatus]);
 
     const cleanup = () => {
         cleanupResources(0, 'manual cleanup', true);
     };
 
     const handleAcceptCall = () => {
-        console.log('[CallModal] Accepting call');
-        setCallStatus('connecting');
-        setCallDirection('incoming'); // Explicitly set call direction
+        console.log('[CallModal] Accepting call with data:', callData);
 
-        // Now that the user has accepted, we can initialize the media
+        if (!callData || !callData.callId) {
+            console.error('[CallModal] Cannot accept call: missing call data');
+            setError('Cannot accept call: missing call information');
+            return;
+        }
+
+        setCallStatus('connecting');
+
+        // Ensure we have the correct call ID
+        if (callData.callId && !callId) {
+            setCallId(callData.callId);
+        }
+
         // The useEffect will detect the status change and initialize media
     };
     const handleRejectCall = () => {
-        console.log('[CallModal] Rejecting call');
-        socket.emit('reject-call', { senderId: userId, receiverId: callData.senderId, callId });
+        console.log('[CallModal] Rejecting call with data:', callData);
+
+        if (!callData || !callData.callId) {
+            console.error('[CallModal] Cannot reject call: missing call data');
+            setError('Cannot reject call: missing call information');
+            onClose();
+            return;
+        }
+
+        socket.emit('reject-call', {
+            senderId: userId,
+            receiverId: callData.senderId,
+            callId: callData.callId || callId
+        });
+
         setCallStatus('rejected');
         cleanupResources(2000, 'handleRejectCall', true);
     };
@@ -541,8 +677,12 @@ const CallModal = ({
 
     useEffect(() => {
         console.log('[CallModal] Component mounted');
+        isMountedRef.current = true;
+
         return () => {
-            console.log('[CallModal] Component unmounted');
+            console.log('[CallModal] Component unmounted - performing final cleanup');
+            isMountedRef.current = false;
+            cleanupResources(0, 'component unmounted', false);
         };
     }, []);
 

@@ -41,6 +41,8 @@ export default function Chat() {
     const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
     const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
     const [processing, setProcessing] = useState(null);
+    const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
+    const [forceUpdate, setForceUpdate] = useState(false);
     const router = useRouter();
     const socketRef = useRef(null); // Persist socket instance
 
@@ -159,8 +161,17 @@ export default function Chat() {
             setLoading(false);
         });
 
-        newSocket.on('messages', (messages) => {
-            setMessages(messages);
+        newSocket.on('messages', (data) => {
+            console.log(`Received ${data.length} messages with ${data.reduce((sum, msg) => sum + (msg.reactions?.length || 0), 0)} total reactions`);
+
+            // Ensure each message has a reactions array
+            const messagesWithReactions = data.map(msg => ({
+                ...msg,
+                reactions: Array.isArray(msg.reactions) ? msg.reactions : []
+            }));
+
+            setMessages(messagesWithReactions);
+            setLoading(false);
         });
 
         newSocket.on('callHistory', (calls) => {
@@ -274,7 +285,94 @@ export default function Chat() {
 
         newSocket.on('call-error', ({ message }) => {
             console.log('Call error received:', message);
+
+            // Ignore the "There is already an active call" error
+            // This error should no longer occur with our updated socket handler
+            if (message === 'There is already an active call with this user') {
+                console.log('Ignoring "already active call" error as we now handle this case');
+                return; // Don't show this error to the user
+            }
+
             setError(message);
+        });
+
+        // Make sure the incoming-call event is properly handled
+        newSocket.on('incoming-call', (data) => {
+            console.log('Global incoming call received in chat/page.js:', data);
+
+            // Store the incoming call data globally
+            setGlobalIncomingCall(data);
+
+            // Show a notification
+            const caller = friends.find(f => f.id === data.senderId);
+            setError(`Incoming ${data.callType} call from ${caller?.name || 'someone'}!`);
+            playNotificationSound();
+
+            // Switch to the caller's chat
+            setSelectedFriendId(data.senderId);
+
+            // Force a re-render of the MessageSection component
+            setForceUpdate(prev => !prev);
+        });
+
+        newSocket.on('messageUpdated', (updatedMessage) => {
+            setMessages(prev =>
+                prev.map(msg => msg.id === updatedMessage.id ? updatedMessage : msg)
+            );
+        });
+
+        newSocket.on('messageDeleted', ({ messageId }) => {
+            setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        });
+
+        newSocket.on('messageReaction', ({ messageId, reaction }) => {
+            console.log('Received messageReaction event:', { messageId, reaction });
+
+            setMessages(prev => {
+                // Create a new array to ensure state update triggers
+                return prev.map(msg => {
+                    if (msg.id === messageId) {
+                        // Create a new reactions array if it doesn't exist
+                        const reactions = Array.isArray(msg.reactions) ? [...msg.reactions] : [];
+
+                        // Remove any existing reaction from this user (single reaction per user)
+                        const filteredReactions = reactions.filter(r => r.userId !== reaction.userId);
+
+                        // Add the new reaction
+                        filteredReactions.push(reaction);
+
+                        // Return a new message object with updated reactions
+                        return { ...msg, reactions: filteredReactions };
+                    }
+                    return msg;
+                });
+            });
+        });
+
+        newSocket.on('messageReactionRemoved', ({ messageId, userId, emoji }) => {
+            console.log('Received messageReactionRemoved event:', { messageId, userId, emoji });
+
+            setMessages(prev => {
+                // Create a new array to ensure state update triggers
+                return prev.map(msg => {
+                    if (msg.id === messageId) {
+                        // Filter out the removed reaction
+                        const reactions = Array.isArray(msg.reactions) 
+                            ? msg.reactions.filter(r => r.userId !== userId)
+                            : [];
+                        
+                        console.log('Updated reactions after removal for message:', { 
+                            messageId, 
+                            before: msg.reactions?.length || 0, 
+                            after: reactions.length 
+                        });
+                        
+                        // Return a new message object with updated reactions
+                        return { ...msg, reactions };
+                    }
+                    return msg;
+                });
+            });
         });
 
         return () => {
@@ -294,6 +392,11 @@ export default function Chat() {
             newSocket.off('userStatus');
             newSocket.off('friendRequestError');
             newSocket.off('call-error');
+            newSocket.off('incoming-call');
+            newSocket.off('messageUpdated');
+            newSocket.off('messageDeleted');
+            newSocket.off('messageReaction');
+            newSocket.off('messageReactionRemoved');
             newSocket.disconnect();
         };
     }, [token, user]);
@@ -385,6 +488,9 @@ export default function Chat() {
                         socket={socket}
                         setSelectedFriendId={setSelectedFriendId}
                         className={!selectedFriendId ? 'hidden md:flex' : 'flex'}
+                        globalIncomingCall={globalIncomingCall}
+                        setGlobalIncomingCall={setGlobalIncomingCall}
+                        forceUpdate={forceUpdate}
                     />
                 </div>
 
